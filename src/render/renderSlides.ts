@@ -52,13 +52,27 @@ async function compositeCoverSlide(photo: Buffer, eyebrow: string, title: string
 
 const CROP_GRAVITIES = ["north", "centre", "south", "east", "west"] as const;
 
+// The region the title/body text actually occupies (see buildPhotoOverlaySvg's
+// fixed layout) — sampled on the CROPPED photo, before the gradient is applied,
+// to decide whether that gradient needs to be stronger than the default.
+const TEXT_ZONE = { left: 90, top: 420, width: 900, height: 560 };
+const BRIGHT_LUMINANCE_THRESHOLD = 130; // 0-255 scale
+
+async function isTextZoneBright(croppedPhoto: Buffer): Promise<boolean> {
+  const { channels } = await sharp(croppedPhoto).extract(TEXT_ZONE).stats();
+  const [r, g, b] = channels;
+  const luminance = 0.299 * (r?.mean ?? 0) + 0.587 * (g?.mean ?? 0) + 0.114 * (b?.mean ?? 0);
+  return luminance > BRIGHT_LUMINANCE_THRESHOLD;
+}
+
 /** Composites the same texture photo (different crop per page) with the gradient+text overlay. No brand-color validation — the background is a photo, not the flat template. */
 async function renderPhotoInformationSlide(photoPath: string, slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number): Promise<Buffer> {
   const photo = await readFile(photoPath);
   const gravity = CROP_GRAVITIES[slide.order % CROP_GRAVITIES.length];
-  const rendered = await sharp(photo)
-    .resize(1080, 1080, { fit: "cover", position: gravity })
-    .composite([{ input: Buffer.from(buildPhotoOverlaySvg(slide, eyebrow, totalSlides)), top: 0, left: 0 }])
+  const croppedPhoto = await sharp(photo).resize(1080, 1080, { fit: "cover", position: gravity }).jpeg().toBuffer();
+  const needsStrongScrim = await isTextZoneBright(croppedPhoto);
+  const rendered = await sharp(croppedPhoto)
+    .composite([{ input: Buffer.from(buildPhotoOverlaySvg(slide, eyebrow, totalSlides, needsStrongScrim)), top: 0, left: 0 }])
     .jpeg({ quality: 90, chromaSubsampling: "4:4:4" })
     .toBuffer();
   const { info } = await sharp(rendered).raw().toBuffer({ resolveWithObject: true });

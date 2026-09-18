@@ -165,7 +165,7 @@ export function buildCarouselInformationSvg(slide: GeneratedCarouselSlide, eyebr
  * for the theme's category; buildCarouselInformationSvg is the flat-design
  * fallback for categories with no photos uploaded yet.
  */
-export function buildPhotoOverlaySvg(slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number) {
+export function buildPhotoOverlaySvg(slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number, needsStrongScrim: boolean) {
   const titleLines = splitCarouselText(slide.title, 14);
   const bodyLines = splitCarouselText(slide.body, 24);
   const isCta = slide.kind === "cta";
@@ -176,13 +176,25 @@ export function buildPhotoOverlaySvg(slide: GeneratedCarouselSlide, eyebrow: str
   const bodySvg = bodyLines.map((line, index) => `<text x="116" y="${boxY + 62 + index * 46}" class="bodyOnDark">${escapeXml(line)}</text>`).join("");
   const reservation = isCta ? `<text x="116" y="${boxY + 62 + bodyBlockHeight + 34}" class="reservation">公式LINE　${escapeXml("https://lin.ee/OFlfdeH")}</text>` : "";
 
+  // Measured against the actual cropped photo (see renderSlides.ts): a naturally
+  // dark photo only needs the normal gradient, but a bright one (light background,
+  // pale clothing, etc.) gets a stronger scrim so white text stays legible instead
+  // of washing out.
+  const scrimStops = needsStrongScrim
+    ? `<stop offset="0%" stop-color="#1F292E" stop-opacity="0.08"/>
+       <stop offset="30%" stop-color="#1F292E" stop-opacity="0.38"/>
+       <stop offset="60%" stop-color="#1F292E" stop-opacity="0.78"/>
+       <stop offset="100%" stop-color="#1F292E" stop-opacity="0.95"/>`
+    : `<stop offset="0%" stop-color="#1F292E" stop-opacity="0"/>
+       <stop offset="38%" stop-color="#1F292E" stop-opacity="0.22"/>
+       <stop offset="70%" stop-color="#1F292E" stop-opacity="0.62"/>
+       <stop offset="100%" stop-color="#1F292E" stop-opacity="0.92"/>`;
+
   return `
   <svg width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#1F292E" stop-opacity="0"/>
-        <stop offset="42%" stop-color="#1F292E" stop-opacity="0.12"/>
-        <stop offset="100%" stop-color="#1F292E" stop-opacity="0.90"/>
+        ${scrimStops}
       </linearGradient>
     </defs>
     <style>
@@ -194,9 +206,9 @@ export function buildPhotoOverlaySvg(slide: GeneratedCarouselSlide, eyebrow: str
       .station { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 18px; font-weight: 400; fill: #E9E3D4; }
     </style>
     <rect x="0" y="0" width="1080" height="1080" fill="url(#scrim)"/>
-    <rect x="80" y="90" width="${eyebrow.length * 15 + 60}" height="46" rx="23" fill="none" stroke="#FFFFFF" stroke-width="1.5" opacity="0.85"/>
+    <rect x="80" y="90" width="${eyebrow.length * 15 + 60}" height="46" rx="23" fill="#1F292E" fill-opacity="0.32" stroke="#FFFFFF" stroke-width="1.5" opacity="0.9"/>
     <text x="${80 + (eyebrow.length * 15 + 60) / 2}" y="120" text-anchor="middle" class="pill">${escapeXml(eyebrow.toUpperCase())}</text>
-    <rect x="898" y="90" width="112" height="46" rx="23" fill="none" stroke="#FFFFFF" stroke-width="1.5" opacity="0.85"/>
+    <rect x="898" y="90" width="112" height="46" rx="23" fill="#1F292E" fill-opacity="0.32" stroke="#FFFFFF" stroke-width="1.5" opacity="0.9"/>
     <text x="954" y="120" text-anchor="middle" class="pill">${String(slide.order).padStart(2, "0")}/${String(totalSlides).padStart(2, "0")}</text>
     ${titleSvg}
     <rect x="118" y="${460 + (titleLines.length - 1) * 68 + 32}" width="140" height="5" fill="#B8A060"/>
