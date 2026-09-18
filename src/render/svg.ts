@@ -17,6 +17,20 @@ function splitHeadline(headline: string) {
   return [normalized.slice(0, splitAt), normalized.slice(splitAt)];
 }
 
+const ASCII_ALNUM = /[A-Za-z0-9]/;
+
+/** Nudges a line-break index so it never lands inside a Latin word/acronym (e.g. "LINE", "HIFU"). */
+function avoidWordBreak(text: string, cut: number): number {
+  if (cut <= 0 || cut >= text.length) return cut;
+  if (!ASCII_ALNUM.test(text[cut - 1]!) || !ASCII_ALNUM.test(text[cut]!)) return cut;
+  let start = cut;
+  while (start > 0 && ASCII_ALNUM.test(text[start - 1]!)) start -= 1;
+  if (start > 2) return start; // push the whole word onto the next line
+  let end = cut;
+  while (end < text.length && ASCII_ALNUM.test(text[end]!)) end += 1;
+  return end; // word starts too close to the line start — keep it on this line instead
+}
+
 function splitCarouselText(value: string, maxLineLength = 15) {
   const normalized = value.replace(/\s+/g, "").trim();
   if (normalized.length <= maxLineLength) return [normalized];
@@ -25,7 +39,7 @@ function splitCarouselText(value: string, maxLineLength = 15) {
   while (remaining.length > maxLineLength && lines.length < 2) {
     const candidate = remaining.slice(0, maxLineLength + 1);
     const breakAt = Math.max(candidate.lastIndexOf("、"), candidate.lastIndexOf("。"), candidate.lastIndexOf("を"), candidate.lastIndexOf("に"));
-    const cut = breakAt >= 7 ? breakAt + 1 : maxLineLength;
+    const cut = avoidWordBreak(remaining, breakAt >= 7 ? breakAt + 1 : maxLineLength);
     lines.push(remaining.slice(0, cut));
     remaining = remaining.slice(cut);
   }
@@ -71,46 +85,72 @@ export function buildLayoutSvg(draft: Pick<GeneratedDraft, "eyebrow"> & { headli
   </svg>`;
 }
 
-function getSlideLabel(kind: GeneratedCarouselSlide["kind"]) {
-  const labels: Record<GeneratedCarouselSlide["kind"], string> = {
-    cover: "SKIN CARE", insight: "POINT 01", background: "POINT 01", caution: "POINT 02",
-    option: "OPTIONS", consultation: "CONSULTATION", summary: "FOR YOUR VISIT", cta: "RESERVATION",
+/** Simple line-icon markup (white strokes, ~28px extent) centered on the origin — placed inside a colored badge circle. */
+function getSlideIcon(kind: GeneratedCarouselSlide["kind"]): string {
+  const icons: Record<GeneratedCarouselSlide["kind"], string> = {
+    cover: "",
+    insight: `<circle cx="-4" cy="-4" r="11" fill="none" stroke="#fff" stroke-width="3.2"/><line x1="5" y1="5" x2="15" y2="15" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>`,
+    background: `<circle cx="-4" cy="-4" r="11" fill="none" stroke="#fff" stroke-width="3.2"/><line x1="5" y1="5" x2="15" y2="15" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>`,
+    caution: `<circle cx="0" cy="0" r="16" fill="none" stroke="#fff" stroke-width="3.2"/><line x1="0" y1="-8" x2="0" y2="3" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/><circle cx="0" cy="9" r="2" fill="#fff"/>`,
+    option: `<circle cx="-10" cy="-9" r="4" fill="#fff"/><circle cx="10" cy="-9" r="4" fill="#fff"/><circle cx="0" cy="11" r="4" fill="#fff"/><path d="M-10 -5 L0 7 L10 -5" fill="none" stroke="#fff" stroke-width="2.6"/>`,
+    consultation: `<path d="M-15 -10 h30 a4 4 0 0 1 4 4 v9 a4 4 0 0 1 -4 4 h-17 l-8 7 v-7 h-5 a4 4 0 0 1 -4 -4 v-9 a4 4 0 0 1 4 -4 z" fill="none" stroke="#fff" stroke-width="2.6" stroke-linejoin="round"/>`,
+    summary: `<rect x="-12" y="-15" width="24" height="30" rx="3" fill="none" stroke="#fff" stroke-width="2.6"/><line x1="-6" y1="-6" x2="6" y2="-6" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><line x1="-6" y1="2" x2="6" y2="2" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><line x1="-6" y1="10" x2="1" y2="10" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>`,
+    cta: `<line x1="-10" y1="0" x2="9" y2="0" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/><path d="M2 -9 L14 0 L2 9" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`,
   };
-  return labels[kind];
+  return icons[kind];
 }
 
-/** Info slides (2nd page onward): pure template + text, no photo. No generative AI involved. */
-export function buildCarouselInformationSvg(slide: GeneratedCarouselSlide, eyebrow: string) {
+/**
+ * Info slides (2nd page onward): pure template + text, no photo, no generative AI.
+ * Each slide gets an icon that actually means something for its content role
+ * (magnifier for background/insight, warning mark for caution, branch for options,
+ * speech bubble for consultation, checklist for summary, arrow for the CTA), body
+ * copy sits inside a bordered card instead of floating on the bare background, and
+ * a large low-opacity arc varies per slide so the carousel doesn't read as one
+ * repeated background seven times.
+ */
+export function buildCarouselInformationSvg(slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number) {
   const titleLines = splitCarouselText(slide.title, 14);
-  const bodyLines = splitCarouselText(slide.body, 20);
-  const slideLabel = slide.kind === "cta" ? getSlideLabel(slide.kind) : `${eyebrow} · ${getSlideLabel(slide.kind)}`;
-  const titleSvg = titleLines.map((line, index) => `<text x="116" y="${325 + index * 72}" class="headline">${escapeXml(line)}</text>`).join("");
-  const bodySvg = bodyLines.map((line, index) => `<text x="116" y="${570 + index * 42}" class="body">${escapeXml(line)}</text>`).join("");
-  const reservation = slide.kind === "cta" ? `<text x="116" y="780" class="reservation">公式LINE  https://lin.ee/OFlfdeH</text>` : "";
+  const bodyLines = splitCarouselText(slide.body, 24);
+  const isCta = slide.kind === "cta";
+  const titleSvg = titleLines.map((line, index) => `<text x="116" y="${300 + index * 68}" class="headline">${escapeXml(line)}</text>`).join("");
+
+  const boxY = 500;
+  const bodyBlockHeight = bodyLines.length * 46;
+  const reservationGap = isCta ? 56 : 0; // extra room for the LINE line, kept clear of the last body line
+  const boxHeight = 72 + bodyBlockHeight + reservationGap;
+  const bodySvg = bodyLines.map((line, index) => `<text x="150" y="${boxY + 62 + index * 46}" class="${isCta ? "bodyOnDark" : "body"}">${escapeXml(line)}</text>`).join("");
+  const reservation = isCta ? `<text x="150" y="${boxY + 62 + bodyBlockHeight + 34}" class="reservation">公式LINE　${escapeXml("https://lin.ee/OFlfdeH")}</text>` : "";
+
+  // Alternate a large, faint accent arc between two corners so pages don't look identical.
+  const arcTransform = slide.order % 2 === 0 ? "translate(1080,0)" : "translate(0,1080) rotate(180)";
+
   return `
   <svg width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
-    <rect x="0" y="0" width="1080" height="1080" fill="#FBFAF6"/>
-    <rect x="72" y="100" width="7" height="880" fill="#B8A060"/>
-    <rect x="78" y="100" width="546" height="6" fill="#3D6270"/>
-    <rect x="730" y="172" width="238" height="238" rx="119" fill="#E9E3D4"/>
-    <rect x="775" y="218" width="148" height="148" rx="74" fill="#D2DFDC"/>
-    <path d="M704 606 C805 500, 894 705, 1001 598" fill="none" stroke="#B8A060" stroke-width="5"/>
-    <circle cx="790" cy="598" r="13" fill="#3D6270"/>
-    <circle cx="895" cy="598" r="13" fill="#B8A060"/>
-    <circle cx="1001" cy="598" r="13" fill="#3D6270"/>
     <style>
       .eyebrow { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 19px; font-weight: 700; letter-spacing: 4px; fill: #3D6270; }
-      .headline { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 50px; font-weight: 700; letter-spacing: -1px; fill: #1F292E; }
-      .body { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 25px; font-weight: 400; fill: #3D6270; }
-      .number { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 19px; font-weight: 700; letter-spacing: 2px; fill: #B8A060; }
-      .reservation { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 21px; font-weight: 700; fill: #1F292E; }
+      .headline { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 48px; font-weight: 700; letter-spacing: -1px; fill: #1F292E; }
+      .body { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 27px; font-weight: 400; fill: #33424A; }
+      .bodyOnDark { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 27px; font-weight: 400; fill: #FBFAF6; }
+      .pageNumber { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 1px; fill: #B8A060; }
+      .pageTotal { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 20px; font-weight: 400; fill: #B8A88F; }
+      .reservation { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 22px; font-weight: 700; fill: #FBFAF6; }
       .clinic { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 24px; font-weight: 700; fill: #1F292E; }
       .station { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 18px; font-weight: 400; fill: #3D6270; }
     </style>
-    <text x="116" y="164" class="eyebrow">${escapeXml(slideLabel)}</text>
-    <text x="870" y="920" class="number">${String(slide.order).padStart(2, "0")}</text>
+    <rect x="0" y="0" width="1080" height="1080" fill="#FBFAF6"/>
+    <g transform="${arcTransform}" opacity="0.14">
+      <circle cx="0" cy="0" r="360" fill="none" stroke="#B8A060" stroke-width="2"/>
+    </g>
+    <rect x="72" y="100" width="7" height="880" fill="#B8A060"/>
+    <rect x="78" y="100" width="546" height="6" fill="#3D6270"/>
+    <text x="116" y="164" class="eyebrow">${escapeXml(eyebrow.toUpperCase())}</text>
+    <text x="964" y="171" text-anchor="end" class="pageNumber">${String(slide.order).padStart(2, "0")}<tspan class="pageTotal"> / ${String(totalSlides).padStart(2, "0")}</tspan></text>
+    <circle cx="940" cy="230" r="46" fill="#3D6270"/>
+    <g transform="translate(940,230)">${getSlideIcon(slide.kind)}</g>
     ${titleSvg}
-    <rect x="114" y="492" width="365" height="3" fill="#B8A060"/>
+    <rect x="114" y="452" width="365" height="3" fill="#B8A060"/>
+    <rect x="114" y="${boxY}" width="852" height="${boxHeight}" rx="16" fill="${isCta ? "#3D6270" : "#FFFFFF"}" stroke="${isCta ? "#3D6270" : "#E9E3D4"}" stroke-width="1.5"/>
     ${bodySvg}
     ${reservation}
     <text x="114" y="919" class="clinic">いしだ皮フ科・美容皮膚科</text>

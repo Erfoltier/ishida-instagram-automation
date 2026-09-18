@@ -49,8 +49,8 @@ async function compositeCoverSlide(photo: Buffer, eyebrow: string, title: string
   return composited;
 }
 
-async function renderInformationSlide(slide: GeneratedCarouselSlide, eyebrow: string): Promise<Buffer> {
-  const rendered = await sharp(Buffer.from(buildCarouselInformationSvg(slide, eyebrow)))
+async function renderInformationSlide(slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number): Promise<Buffer> {
+  const rendered = await sharp(Buffer.from(buildCarouselInformationSvg(slide, eyebrow, totalSlides)))
     .jpeg({ quality: 92, chromaSubsampling: "4:4:4" })
     .toBuffer();
   await validateBrandTemplate(rendered);
@@ -79,7 +79,7 @@ export async function renderCarouselSlides(draftId: string, draft: GeneratedDraf
       await writeFile(path.join(draftDir, COVER_SOURCE_FILE_NAME), coverPhoto);
       buffer = await compositeCoverSlide(coverPhoto, draft.eyebrow, slide.title, slide.body);
     } else {
-      buffer = await renderInformationSlide(slide, draft.eyebrow);
+      buffer = await renderInformationSlide(slide, draft.eyebrow, slides.length);
     }
     const fileName = `slide-${String(slide.order).padStart(2, "0")}.jpg`;
     const filePath = path.join(draftDir, fileName);
@@ -97,12 +97,13 @@ export async function renderCarouselSlides(draftId: string, draft: GeneratedDraf
 export async function regenerateSlide(
   draftId: string,
   slide: Pick<GeneratedCarouselSlide, "order" | "kind" | "title" | "body">,
-  eyebrow: string
+  eyebrow: string,
+  totalSlides: number
 ): Promise<void> {
   const draftDir = draftDirFor(draftId);
   const buffer = slide.kind === "cover"
     ? await compositeCoverSlide(await readFile(path.join(draftDir, COVER_SOURCE_FILE_NAME)), eyebrow, slide.title, slide.body)
-    : await renderInformationSlide(slide as GeneratedCarouselSlide, eyebrow);
+    : await renderInformationSlide(slide as GeneratedCarouselSlide, eyebrow, totalSlides);
   const fileName = `slide-${String(slide.order).padStart(2, "0")}.jpg`;
   await writeFile(path.join(draftDir, fileName), buffer);
 }

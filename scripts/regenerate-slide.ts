@@ -32,7 +32,7 @@ async function main() {
   slide.title = title;
   slide.body = body;
 
-  await regenerateSlide(draftId, { order: slide.order, kind: slide.kind as never, title, body }, manifest.eyebrow);
+  await regenerateSlide(draftId, { order: slide.order, kind: slide.kind as never, title, body }, manifest.eyebrow, manifest.slides.length);
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
 
   console.log(`再生成しました: drafts/${draftId}/${slide.fileName}`);
