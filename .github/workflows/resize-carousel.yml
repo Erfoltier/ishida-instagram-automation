@@ -1,0 +1,40 @@
+name: Resize carousel (add/remove a page)
+
+on:
+  workflow_dispatch:
+    inputs:
+      draft_id:
+        required: true
+        type: string
+      action:
+        required: true
+        type: string
+      position:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  resize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+      - run: npx tsx scripts/resize-carousel.ts
+        env:
+          DRAFT_ID: ${{ inputs.draft_id }}
+          ACTION: ${{ inputs.action }}
+          POSITION: ${{ inputs.position }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - run: |
+          git config user.name "ishida-instagram-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add drafts
+          git diff --cached --quiet || git commit -m "resize: ${{ inputs.draft_id }} ${{ inputs.action }} @ ${{ inputs.position }}"
+          git push

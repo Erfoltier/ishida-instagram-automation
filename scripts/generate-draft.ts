@@ -3,7 +3,7 @@ import path from "node:path";
 import { selectScheduledTheme, getThemeSourceUrls } from "../src/content/themes";
 import { fetchOfficialSourceText } from "../src/content/officialSource";
 import { createPostCopy, createCarouselSlideCopy } from "../src/content/draftGeneration";
-import { selectCarouselTemplate, buildCarouselSlidePlan } from "../src/content/carouselPlan";
+import { estimateSlideCount, buildCarouselSlidePlan } from "../src/content/carouselPlan";
 import { renderCarouselSlides } from "../src/render/renderSlides";
 import { readPostHistory } from "../src/state/history";
 
@@ -17,8 +17,9 @@ async function main() {
   console.log(`参照ページ: ${sourceUrls.join(", ")}`);
 
   const draft = await createPostCopy(theme, sourceText);
-  const template = selectCarouselTemplate(draft.primarySubject);
-  const plan = buildCarouselSlidePlan(template);
+  const slideCount = estimateSlideCount(draft.primarySubject, sourceText);
+  console.log(`参照テキストの分量から${slideCount}枚構成を選定しました。`);
+  const plan = buildCarouselSlidePlan(slideCount);
   const slides = await createCarouselSlideCopy(draft, plan, sourceText);
 
   const draftId = `${new Date().toISOString().slice(0, 10)}-${Math.random().toString(36).slice(2, 8)}`;

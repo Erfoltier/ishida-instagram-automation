@@ -89,7 +89,6 @@ export function buildLayoutSvg(draft: Pick<GeneratedDraft, "eyebrow"> & { headli
 function getSlideIcon(kind: GeneratedCarouselSlide["kind"]): string {
   const icons: Record<GeneratedCarouselSlide["kind"], string> = {
     cover: "",
-    insight: `<circle cx="-4" cy="-4" r="11" fill="none" stroke="#fff" stroke-width="3.2"/><line x1="5" y1="5" x2="15" y2="15" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>`,
     background: `<circle cx="-4" cy="-4" r="11" fill="none" stroke="#fff" stroke-width="3.2"/><line x1="5" y1="5" x2="15" y2="15" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>`,
     caution: `<circle cx="0" cy="0" r="16" fill="none" stroke="#fff" stroke-width="3.2"/><line x1="0" y1="-8" x2="0" y2="3" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/><circle cx="0" cy="9" r="2" fill="#fff"/>`,
     option: `<circle cx="-10" cy="-9" r="4" fill="#fff"/><circle cx="10" cy="-9" r="4" fill="#fff"/><circle cx="0" cy="11" r="4" fill="#fff"/><path d="M-10 -5 L0 7 L10 -5" fill="none" stroke="#fff" stroke-width="2.6"/>`,

@@ -104,6 +104,16 @@ async function handleApi(request, env, url) {
     return jsonResponse({ ok: true, note: "生成には1〜2分ほどかかります。" });
   }
 
+  if (url.pathname === "/api/drafts/resize" && request.method === "POST") {
+    const { draftId, action, position } = await request.json();
+    if (!draftId || !action || !position) return jsonResponse({ error: "draftId, action, positionは必須です。" }, { status: 400 });
+    await ghFetch(env, "/actions/workflows/resize-carousel.yml/dispatches", {
+      method: "POST",
+      body: JSON.stringify({ ref: "main", inputs: { draft_id: draftId, action, position: String(position) } }),
+    });
+    return jsonResponse({ ok: true, note: "反映には1分ほどかかります。" });
+  }
+
   if (url.pathname === "/api/drafts/edit" && request.method === "POST") {
     const { draftId, order, title, body } = await request.json();
     if (!draftId || !order || !title || !body) return jsonResponse({ error: "draftId, order, title, bodyは必須です。" }, { status: 400 });
@@ -154,9 +164,9 @@ const PAGE_HTML = `<!doctype html>
 
 <div id="login">
   <h1>スタッフ確認画面</h1>
-  <p>合言葉を入力してください。</p>
-  <input type="password" id="passcode" placeholder="合言葉">
-  <div class="actions"><button class="primary" onclick="doLogin()">入る</button></div>
+  <p>Password</p>
+  <input type="password" id="passcode" placeholder="Password">
+  <div class="actions"><button class="primary" onclick="doLogin()">Login</button></div>
   <p class="status" id="login-status"></p>
 </div>
 
@@ -224,6 +234,35 @@ function renderListItem(draft) {
 function viewDraft(draftId) { selectedDraftId = draftId; renderView(); }
 function backToList() { selectedDraftId = null; renderView(); }
 
+async function addPage(draftId) {
+  if (!confirm('参照テキストを元に新しいページを1枚追加します。反映まで1分ほどかかります。よろしいですか？')) return;
+  const draft = draftsCache.find(d => d.draftId === draftId);
+  await resizeCarousel(draftId, 'add', draft ? draft.slides.length : 0);
+}
+
+async function removePage(draftId, order) {
+  if (!confirm(order + '枚目のページを削除します。よろしいですか？')) return;
+  await resizeCarousel(draftId, 'remove', order);
+}
+
+async function resizeCarousel(draftId, action, position) {
+  const statusEl = document.getElementById(\`resize-status-\${draftId}\`);
+  const previousCount = (draftsCache.find(d => d.draftId === draftId) || {}).slides?.length;
+  if (statusEl) statusEl.textContent = '処理をリクエストしました。1分ほどお待ちください…';
+  const res = await fetch('/api/drafts/resize', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ draftId, action, position }) });
+  if (!res.ok) { if (statusEl) statusEl.textContent = 'エラー: ' + (await res.json()).error; return; }
+  setTimeout(() => pollForResize(draftId, previousCount), 15000);
+}
+
+async function pollForResize(draftId, previousCount, attempt = 0) {
+  const statusEl = document.getElementById(\`resize-status-\${draftId}\`);
+  if (attempt > 8) { if (statusEl) statusEl.textContent = '反映確認がタイムアウトしました。ページを再読み込みしてください。'; return; }
+  await loadDrafts();
+  const draft = draftsCache.find(d => d.draftId === draftId);
+  if (draft && draft.slides.length !== previousCount) return;
+  setTimeout(() => pollForResize(draftId, previousCount, attempt + 1), 8000);
+}
+
 async function generateNew() {
   if (!confirm('新しい投稿案の生成をリクエストします。1〜2分ほどかかります。よろしいですか？')) return;
   const res = await fetch('/api/drafts/generate', { method: 'POST' });
@@ -232,6 +271,8 @@ async function generateNew() {
 }
 
 function renderDraft(draft) {
+  const canRemove = draft.slides.length > 5;
+  const canAdd = draft.slides.length < 10;
   const slidesHtml = draft.slides.map(slide => \`
     <div class="slide" id="slide-\${draft.draftId}-\${slide.order}">
       <img src="\${slide.imageUrl}" alt="slide \${slide.order}">
@@ -242,6 +283,7 @@ function renderDraft(draft) {
         <textarea rows="2" id="body-\${draft.draftId}-\${slide.order}">\${escapeHtml(slide.body)}</textarea>
         <div class="actions">
           <button onclick="editSlide('\${draft.draftId}', \${slide.order})">保存して再生成</button>
+          \${slide.kind !== 'cover' ? \`<button class="danger" \${canRemove ? '' : 'disabled'} onclick="removePage('\${draft.draftId}', \${slide.order})">このページを削除</button>\` : ''}
         </div>
         <p class="status" id="edit-status-\${draft.draftId}-\${slide.order}"></p>
         \`}
@@ -252,6 +294,10 @@ function renderDraft(draft) {
   <div class="card">
     <div class="subject">\${escapeHtml(draft.subject)}</div>
     \${slidesHtml}
+    <div class="actions" style="margin:12px 0;">
+      <button \${canAdd ? '' : 'disabled'} onclick="addPage('\${draft.draftId}')">＋ページを追加</button>
+    </div>
+    <p class="status" id="resize-status-\${draft.draftId}"></p>
     <p><strong>キャプション</strong></p>
     <div class="caption">\${escapeHtml(draft.caption)}\n\n\${draft.hashtags.join(' ')}</div>
     <p><strong>医療広告配慮メモ</strong>: \${escapeHtml(draft.complianceNotes)}</p>

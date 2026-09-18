@@ -1,5 +1,5 @@
 import { invokeClaudeJSON } from "../llm/claude";
-import type { CarouselSlidePlan } from "./carouselPlan";
+import type { CarouselSlidePlan, CarouselSlideKind } from "./carouselPlan";
 import type { ScheduledTheme } from "./themes";
 
 const LINE_URL = "https://lin.ee/OFlfdeH";
@@ -240,4 +240,29 @@ export async function createCarouselSlideCopy(draft: GeneratedDraft, plan: Carou
     const reason = error instanceof MedicalAdvertisingCopyError ? `禁止表現（${error.matchedPatterns.join("、")}）` : error.message;
     return createCarouselSlideCopyOnce(draft, plan, sourceText, `\n重要: 前回は${reason}のため無効でした。参照テキストの具体的な事実だけを使って書き直してください。`);
   }
+}
+
+const SINGLE_SLIDE_SCHEMA = {
+  type: "object",
+  properties: { title: { type: "string" }, body: { type: "string" } },
+  required: ["title", "body"],
+} as const;
+
+/** Generates copy for exactly one new content slide — used when staff add a page via the review UI. */
+export async function generateSingleSlideCopy(
+  subject: string,
+  sourceText: string,
+  kind: CarouselSlideKind,
+  factInstruction: string
+): Promise<{ title: string; body: string }> {
+  const result = await invokeClaudeJSON<{ title: string; body: string }>({
+    maxTokens: 4096,
+    toolName: "submit_single_slide",
+    toolDescription: "カルーセル1ページ分のtitle/bodyを提出する",
+    schema: SINGLE_SLIDE_SCHEMA,
+    system: "あなたは美容皮膚科のSNS編集者です。日本の医療広告に配慮した、画像1枚に一論点だけを示す短い日本語を書きます。効果保証、優位表現、価格・限定訴求、患者体験、症例、ビフォーアフター、架空の院内・施術描写を含めません。bodyは、渡された参照テキストから実際に引用・要約できる具体的な内容にしてください。「人それぞれです」のような一般論だけで終わらせるのは禁止です。titleを42文字以内、bodyを100文字以内にしてください。",
+    user: `主題は「${subject}」だけです。\n\n--- 参照テキスト ---\n${sourceText}\n--- 参照テキストここまで ---\n\nこのページ（種類: ${kind}）のtitle/bodyを書いてください。指示: ${factInstruction}`,
+  });
+  validateSlideText(result.title, result.body);
+  return result;
 }
