@@ -3,7 +3,12 @@ name: Generate Instagram draft
 on:
   schedule:
     - cron: "0 1 * * 2,6" # Tue/Sat 10:00 JST
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      theme_subject:
+        description: "テーマを指定する場合はsrc/content/themes.tsのsubjectと完全一致させる（空欄なら自動選定）"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -25,6 +30,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          THEME_SUBJECT: ${{ inputs.theme_subject }}
       - run: |
           git config user.name "ishida-instagram-bot"
           git config user.email "actions@users.noreply.github.com"

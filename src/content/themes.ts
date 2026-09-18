@@ -100,3 +100,8 @@ export function selectScheduledTheme(publishedPosts: PublishedPostRecord[], date
 export function getThemeSourceUrls(theme: ScheduledTheme): string[] {
   return theme.sourceSlugs.map(slug => getTreatmentBySlug(slug).url);
 }
+
+/** Exact-match lookup for a staff-specified theme (see scripts/generate-draft.ts's THEME_SUBJECT override). */
+export function findThemeBySubject(subject: string): ScheduledTheme | undefined {
+  return SCHEDULED_THEME_CATALOG.find(theme => theme.subject === subject);
+}

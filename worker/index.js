@@ -97,9 +97,10 @@ async function handleApi(request, env, url) {
   }
 
   if (url.pathname === "/api/drafts/generate" && request.method === "POST") {
+    const { themeSubject } = await request.json().catch(() => ({}));
     await ghFetch(env, "/actions/workflows/generate.yml/dispatches", {
       method: "POST",
-      body: JSON.stringify({ ref: "main" }),
+      body: JSON.stringify({ ref: "main", inputs: themeSubject ? { theme_subject: themeSubject } : {} }),
     });
     return jsonResponse({ ok: true, note: "生成には1〜2分ほどかかります。" });
   }
@@ -176,6 +177,14 @@ const PAGE_HTML = `<!doctype html>
 </div>
 
 <script>
+// Keep in sync with src/content/themes.ts SCHEDULED_THEME_CATALOG subjects.
+const THEME_SUBJECTS = [
+  "肝斑の見分け方", "シミの診断とケア", "医療脱毛の相談", "部分痩せの脂肪ケア",
+  "ニキビ跡の赤み", "ニキビ跡の凹み", "肌育による肌質相談", "目元のちりめんじわ",
+  "額のしわ", "首のしわ", "ほうれい線", "マリオネットライン", "医療HIFU",
+  "紫外線後のシミケア", "毛穴の目立ちにくいケア", "赤ら顔の相談",
+];
+
 async function doLogin() {
   const passcode = document.getElementById('passcode').value;
   const res = await fetch('/login', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ passcode }) });
@@ -208,7 +217,12 @@ function renderView() {
     return;
   }
   selectedDraftId = null;
-  const header = \`<div class="actions" style="margin-bottom:16px;">
+  const themeOptions = THEME_SUBJECTS.map(subject => \`<option value="\${subject}">\${subject}</option>\`).join('');
+  const header = \`<div class="actions" style="margin-bottom:16px; align-items:center;">
+    <select id="theme-select" style="width:auto;">
+      <option value="">おまかせ（自動選定）</option>
+      \${themeOptions}
+    </select>
     <button class="primary" onclick="generateNew()">＋ 新規草稿を作成</button>
     <button onclick="loadDrafts()">更新</button>
   </div>\`;
@@ -264,8 +278,13 @@ async function pollForResize(draftId, previousCount, attempt = 0) {
 }
 
 async function generateNew() {
-  if (!confirm('新しい投稿案の生成をリクエストします。1〜2分ほどかかります。よろしいですか？')) return;
-  const res = await fetch('/api/drafts/generate', { method: 'POST' });
+  const select = document.getElementById('theme-select');
+  const themeSubject = select ? select.value : '';
+  const confirmMessage = themeSubject
+    ? \`テーマ「\${themeSubject}」で投稿案の生成をリクエストします。1〜2分ほどかかります。よろしいですか？\`
+    : '新しい投稿案の生成をリクエストします（テーマはおまかせ）。1〜2分ほどかかります。よろしいですか？';
+  if (!confirm(confirmMessage)) return;
+  const res = await fetch('/api/drafts/generate', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ themeSubject }) });
   if (!res.ok) { alert('エラー: ' + (await res.json()).error); return; }
   alert('生成をリクエストしました。1〜2分ほど待ってから「更新」を押してください。');
 }

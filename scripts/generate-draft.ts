@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { selectScheduledTheme, getThemeSourceUrls } from "../src/content/themes";
+import { selectScheduledTheme, getThemeSourceUrls, findThemeBySubject } from "../src/content/themes";
 import { fetchOfficialSourceText } from "../src/content/officialSource";
 import { createPostCopy, createCarouselSlideCopy } from "../src/content/draftGeneration";
 import { estimateSlideCount, buildCarouselSlidePlan } from "../src/content/carouselPlan";
@@ -8,9 +8,17 @@ import { renderCarouselSlides } from "../src/render/renderSlides";
 import { readPostHistory } from "../src/state/history";
 
 async function main() {
-  const history = await readPostHistory();
-  const theme = selectScheduledTheme(history);
-  console.log(`選定テーマ: ${theme.subject}`);
+  const requestedSubject = process.env.THEME_SUBJECT?.trim();
+  let theme;
+  if (requestedSubject) {
+    theme = findThemeBySubject(requestedSubject);
+    if (!theme) throw new Error(`指定されたテーマ「${requestedSubject}」がSCHEDULED_THEME_CATALOGに見つかりません。`);
+    console.log(`指定テーマ: ${theme.subject}`);
+  } else {
+    const history = await readPostHistory();
+    theme = selectScheduledTheme(history);
+    console.log(`自動選定テーマ: ${theme.subject}`);
+  }
 
   const sourceUrls = getThemeSourceUrls(theme);
   const sourceText = await fetchOfficialSourceText(sourceUrls);
