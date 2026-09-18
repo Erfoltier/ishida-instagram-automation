@@ -1,0 +1,36 @@
+name: Publish approved Instagram draft
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  publish:
+    # Note: GitHub Actions expressions have no lower()/toLower() function, so the
+    # exact "approve" text match (case-insensitive) happens inside publish-approved.ts
+    # instead — it exits 0 as a no-op for any other comment.
+    if: >
+      contains(github.event.issue.labels.*.name, 'instagram-draft') &&
+      github.event.issue.state == 'open'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: npx tsx scripts/publish-approved.ts "${{ github.event.issue.number }}" "${{ github.event.comment.body }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          META_IG_ACCESS_TOKEN: ${{ secrets.META_IG_ACCESS_TOKEN }}
+          META_IG_PROFESSIONAL_ACCOUNT_ID: ${{ secrets.META_IG_PROFESSIONAL_ACCOUNT_ID }}
+      - run: |
+          git config user.name "ishida-instagram-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/post-history.json
+          git diff --cached --quiet || git commit -m "publish: issue #${{ github.event.issue.number }}"
+          git push

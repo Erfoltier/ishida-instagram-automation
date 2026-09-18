@@ -1,0 +1,24 @@
+name: Refresh Instagram access token
+
+on:
+  schedule:
+    - cron: "0 3 * * 1" # weekly, Monday 12:00 JST
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: npm run refresh-token
+        env:
+          META_IG_ACCESS_TOKEN: ${{ secrets.META_IG_ACCESS_TOKEN }}
+          REPO_ADMIN_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}

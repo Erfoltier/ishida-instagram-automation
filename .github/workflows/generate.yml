@@ -1,0 +1,34 @@
+name: Generate Instagram draft
+
+on:
+  schedule:
+    - cron: "0 1 * * 2,6" # Tue/Sat 10:00 JST
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - id: generate
+        run: npm run generate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - run: |
+          git config user.name "ishida-instagram-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add drafts data
+          git diff --cached --quiet || git commit -m "draft: ${{ steps.generate.outputs.draft_id }}"
+          git push
+      - run: npx tsx scripts/create-issue.ts "${{ steps.generate.outputs.draft_id }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,29 @@
+{
+  "name": "ishida-instagram-automation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GitHub Actions-based Instagram carousel draft generation and publishing for Ishida Dermatology (Meta Graph API direct, no browser automation, no third-party hosting).",
+  "type": "module",
+  "scripts": {
+    "generate": "tsx scripts/generate-draft.ts",
+    "publish": "tsx scripts/publish-approved.ts",
+    "refresh-token": "tsx scripts/refresh-token.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "cheerio": "^1.0.0",
+    "libsodium-wrappers": "^0.7.15",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "@types/libsodium-wrappers": "^0.7.14",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "allowScripts": {
+    "sharp@0.33.5": true,
+    "esbuild@0.28.2": true
+  }
+}
