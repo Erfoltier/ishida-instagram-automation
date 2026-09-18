@@ -1,0 +1,10 @@
+name = "ishida-instagram-staff"
+main = "index.js"
+compatibility_date = "2026-01-01"
+
+[vars]
+GITHUB_REPOSITORY = "Erfoltier/ishida-instagram-automation"
+
+# Secrets (not stored here — set with `wrangler secret put <NAME>`):
+#   GH_TOKEN        Fine-grained PAT scoped to this repo. Permissions: Issues (Read and write), Actions (Read and write).
+#   STAFF_PASSCODE  Shared passcode staff type in to access the review page.

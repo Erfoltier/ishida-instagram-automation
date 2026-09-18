@@ -83,3 +83,43 @@ npm run generate
 ## 表紙画像プロバイダーの差し替え
 
 `src/render/coverImage.ts`の`coverPhotoProvider`が唯一の差し替えポイントです。現在はOpenAI画像生成(`openAiCoverPhotoProvider`)。Adobe Stock for Enterprise等の契約が整い次第、同じ`CoverPhotoProvider`インターフェースを実装した新しいプロバイダーに差し替えるだけで移行できます。他のファイルは変更不要です。
+
+## スタッフ用の確認・承認Webページ（Cloudflare Workers）
+
+GitHub Issueは技術者向けの画面のため、GitHubアカウントを持たないスタッフ用に、承認・却下・文章編集ができる簡易Webページを`worker/`に用意しています。**常時稼働のサーバーではなく**、押した時だけ動く無料枠のCloudflare Workersで動かすため、追加のホスティング費用は基本的にかかりません。データの実体は今までどおりGitHub Issue・リポジトリのファイルのままで、このページはそれを見やすく操作しやすくする窓口です。
+
+### デプロイ手順
+
+1. [Cloudflare](https://dash.cloudflare.com/sign-up)の無料アカウントを作成（Workers Freeプランでよい）
+2. このリポジトリを別途ローカルにcloneしていない場合は、`git clone`してから`worker`フォルダに移動
+   ```bash
+   cd worker
+   npx wrangler login
+   ```
+   ブラウザが開くのでCloudflareアカウントでログイン・許可する
+3. `wrangler.toml`の`GITHUB_REPOSITORY`が実際のリポジトリ名（`Erfoltier/ishida-instagram-automation`）になっているか確認
+4. シークレットを2つ登録する
+   ```bash
+   npx wrangler secret put GH_TOKEN
+   npx wrangler secret put STAFF_PASSCODE
+   ```
+   - `GH_TOKEN`: GitHubの Fine-grained PAT を新規発行（Settings → Developer settings → Fine-grained personal access tokens）。Repository accessをこのリポジトリのみに限定し、Permissionsで **Issues: Read and write**、**Actions: Read and write** を設定する（`REPO_ADMIN_TOKEN`とは別の、専用トークンにしてください）
+   - `STAFF_PASSCODE`: スタッフに共有する合言葉（好きな文字列でよい）
+5. デプロイ
+   ```bash
+   npx wrangler deploy
+   ```
+   完了すると`https://ishida-instagram-staff.<あなたのサブドメイン>.workers.dev`のようなURLが表示されます。これをスタッフに共有してください（合言葉と2つでワンセット）。
+
+### できること
+
+- 承認待ちの投稿案を一覧表示（画像・キャプション・各ページの文章）
+- 「承認してInstagramへ公開」ボタン → GitHub Issueに`approve`とコメントするのと同じ効果（`publish.yml`がそのまま動く）
+- 「却下」ボタン → 理由コメントを付けてIssueをクローズ
+- 各ページのタイトル・本文をその場で編集し「保存して再生成」→ `regenerate-slide.yml`が同じデザインテンプレートで画像を作り直す（表紙の場合、AI写真は再生成せず同じ写真にテキストだけ載せ直すので、費用も発生せず写真が意図せず変わることもない）
+
+### 注意点
+
+- 合言葉は全スタッフ共通の1つです。個人ごとのアカウント管理はしていません（元のManusアプリにあった「招待制・個人ログイン」ほどの厳密さはない前提です）
+- 画像の反映には`raw.githubusercontent.com`のキャッシュにより数十秒程度のタイムラグが出ることがあります
+- Cloudflareアカウントの2段階認証など、セキュリティ設定はCloudflare側の推奨に従ってください
