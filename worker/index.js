@@ -96,6 +96,14 @@ async function handleApi(request, env, url) {
     return jsonResponse({ ok: true });
   }
 
+  if (url.pathname === "/api/drafts/generate" && request.method === "POST") {
+    await ghFetch(env, "/actions/workflows/generate.yml/dispatches", {
+      method: "POST",
+      body: JSON.stringify({ ref: "main" }),
+    });
+    return jsonResponse({ ok: true, note: "生成には1〜2分ほどかかります。" });
+  }
+
   if (url.pathname === "/api/drafts/edit" && request.method === "POST") {
     const { draftId, order, title, body } = await request.json();
     if (!draftId || !order || !title || !body) return jsonResponse({ error: "draftId, order, title, bodyは必須です。" }, { status: 400 });
@@ -136,6 +144,10 @@ const PAGE_HTML = `<!doctype html>
   #app { display: none; }
   .status { font-size: 13px; color: #3D6270; }
   .subject { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .list-item { display: flex; gap: 12px; align-items: center; cursor: pointer; }
+  .list-item img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+  .list-item .meta { flex: 1; min-width: 0; }
+  .back-link { background: none; border: none; color: #3D6270; padding: 0 0 12px; font-size: 14px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -161,6 +173,9 @@ async function doLogin() {
   else document.getElementById('login-status').textContent = '合言葉が違います。';
 }
 
+let draftsCache = [];
+let selectedDraftId = null;
+
 async function loadDrafts() {
   const container = document.getElementById('drafts');
   try {
@@ -168,11 +183,52 @@ async function loadDrafts() {
     if (res.status === 401) { document.getElementById('login').style.display = 'block'; document.getElementById('app').style.display = 'none'; return; }
     const data = await res.json();
     if (!res.ok) { container.innerHTML = '<p>エラー: ' + escapeHtml(data.error || res.status) + '</p>'; return; }
-    if (!Array.isArray(data) || data.length === 0) { container.innerHTML = '<p>承認待ちの投稿案はありません。</p>'; return; }
-    container.innerHTML = data.map(renderDraft).join('');
+    draftsCache = Array.isArray(data) ? data : [];
+    renderView();
   } catch (err) {
     container.innerHTML = '<p>読み込みエラー: ' + escapeHtml(String(err)) + '</p>';
   }
+}
+
+function renderView() {
+  const container = document.getElementById('drafts');
+  const draft = selectedDraftId && draftsCache.find(d => d.draftId === selectedDraftId);
+  if (draft) {
+    container.innerHTML = '<button class="back-link" onclick="backToList()">← 一覧に戻る</button>' + renderDraft(draft);
+    return;
+  }
+  selectedDraftId = null;
+  const header = \`<div class="actions" style="margin-bottom:16px;">
+    <button class="primary" onclick="generateNew()">＋ 新規草稿を作成</button>
+    <button onclick="loadDrafts()">更新</button>
+  </div>\`;
+  const list = draftsCache.length === 0
+    ? '<p>承認待ちの投稿案はありません。</p>'
+    : draftsCache.map(renderListItem).join('');
+  container.innerHTML = header + list;
+}
+
+function renderListItem(draft) {
+  const cover = draft.slides.find(s => s.kind === 'cover') || draft.slides[0];
+  return \`
+  <div class="card list-item" onclick="viewDraft('\${draft.draftId}')">
+    \${cover ? \`<img src="\${cover.imageUrl}" alt="cover">\` : ''}
+    <div class="meta">
+      <div class="subject">\${escapeHtml(draft.subject)}</div>
+      <div class="status">Issue #\${draft.issueNumber} ・ \${draft.slides.length}枚</div>
+    </div>
+    <button onclick="event.stopPropagation(); viewDraft('\${draft.draftId}')">詳しく見る</button>
+  </div>\`;
+}
+
+function viewDraft(draftId) { selectedDraftId = draftId; renderView(); }
+function backToList() { selectedDraftId = null; renderView(); }
+
+async function generateNew() {
+  if (!confirm('新しい投稿案の生成をリクエストします。1〜2分ほどかかります。よろしいですか？')) return;
+  const res = await fetch('/api/drafts/generate', { method: 'POST' });
+  if (!res.ok) { alert('エラー: ' + (await res.json()).error); return; }
+  alert('生成をリクエストしました。1〜2分ほど待ってから「更新」を押してください。');
 }
 
 function renderDraft(draft) {
@@ -210,24 +266,31 @@ function renderDraft(draft) {
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function escapeAttr(value) { return escapeHtml(value).replace(/"/g, '&quot;'); }
 
+// statusEl is looked up fresh by id every time it's touched, never held across a
+// loadDrafts() call — loadDrafts() replaces the container's innerHTML, which
+// detaches any previously-fetched element reference from the visible page.
+function statusElFor(draftId, order) {
+  return document.getElementById(\`edit-status-\${draftId}-\${order}\`);
+}
+
 async function editSlide(draftId, order) {
   const title = document.getElementById(\`title-\${draftId}-\${order}\`).value;
   const body = document.getElementById(\`body-\${draftId}-\${order}\`).value;
-  const statusEl = document.getElementById(\`edit-status-\${draftId}-\${order}\`);
-  statusEl.textContent = '再生成をリクエストしました。30秒〜1分ほどお待ちください…';
+  statusElFor(draftId, order).textContent = '再生成をリクエストしました。30秒〜1分ほどお待ちください…';
   const res = await fetch('/api/drafts/edit', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ draftId, order, title, body }) });
-  if (!res.ok) { statusEl.textContent = 'エラー: ' + (await res.json()).error; return; }
-  setTimeout(() => pollForUpdate(draftId, order, title, statusEl), 15000);
+  if (!res.ok) { statusElFor(draftId, order).textContent = 'エラー: ' + (await res.json()).error; return; }
+  setTimeout(() => pollForUpdate(draftId, order, title), 15000);
 }
 
-async function pollForUpdate(draftId, order, expectedTitle, statusEl, attempt = 0) {
-  if (attempt > 8) { statusEl.textContent = '反映確認がタイムアウトしました。ページを再読み込みしてください。'; return; }
+async function pollForUpdate(draftId, order, expectedTitle, attempt = 0) {
+  const status = statusElFor(draftId, order);
+  if (attempt > 8) { if (status) status.textContent = '反映確認がタイムアウトしました。ページを再読み込みしてください。'; return; }
   await loadDrafts();
   const img = document.querySelector(\`#slide-\${draftId}-\${order} img\`);
   if (img) img.src = img.src.split('?')[0] + '?v=' + Date.now();
   const titleInput = document.getElementById(\`title-\${draftId}-\${order}\`);
-  if (titleInput && titleInput.value === expectedTitle) { return; }
-  setTimeout(() => pollForUpdate(draftId, order, expectedTitle, statusEl, attempt + 1), 8000);
+  if (titleInput && titleInput.value === expectedTitle) return;
+  setTimeout(() => pollForUpdate(draftId, order, expectedTitle, attempt + 1), 8000);
 }
 
 async function approve(issueNumber) {
