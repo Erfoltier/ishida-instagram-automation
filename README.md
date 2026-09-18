@@ -80,6 +80,10 @@ npm run generate
 
 `src/content/themes.ts`の`SCHEDULED_THEME_CATALOG`にテーマを追加する際は、`src/content/treatmentCatalog.ts`に該当する公式サイトのページ（`/treatment-list/`から）を追加し、`sourceSlugs`で紐づけてください。文章生成はこの参照ページの実際の本文だけを根拠にするため、ここに正しいページを紐づけることが「具体性のある文章」の生成品質に直結します。
 
+## 2枚目以降のページ背景写真ライブラリ
+
+`assets/texture-photos/`に写真をアップロードすると、2枚目以降のページが「写真+グラデーション+文字」のデザインに自動的に切り替わります（1枚もアップロードされていないカテゴリはアイコン+ボックスの旧デザインのまま）。仕様・アップロード方法は`assets/texture-photos/README.md`を参照してください。OpenAI APIでの追加課金なしで運用できます。
+
 ## 表紙画像プロバイダーの差し替え
 
 `src/render/coverImage.ts`の`coverPhotoProvider`が唯一の差し替えポイントです。現在はOpenAI画像生成(`openAiCoverPhotoProvider`)。Adobe Stock for Enterprise等の契約が整い次第、同じ`CoverPhotoProvider`インターフェースを実装した新しいプロバイダーに差し替えるだけで移行できます。他のファイルは変更不要です。
