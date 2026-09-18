@@ -59,7 +59,7 @@ const DRAFT_SCHEMA = {
     subheadline: { type: "string" },
     caption: { type: "string" },
     hashtags: { type: "array", items: { type: "string" } },
-    imageSearchQuery: { type: "string", description: "表紙に使う実写ストック写真を検索するための、英語の短い検索クエリ（人物の年齢層・表情・構図の指定を含む）" },
+    imageSearchQuery: { type: "string", description: "表紙のAI画像生成に渡す被写体の英語の短い説明（美しく上品な日本人女性、年齢層、表情、テーマとの関連性を含む）" },
     complianceNotes: { type: "string" },
   },
   required: ["primarySubject", "topic", "treatmentTheme", "headline", "subheadline", "caption", "hashtags", "imageSearchQuery", "complianceNotes"],
@@ -68,7 +68,7 @@ const DRAFT_SCHEMA = {
 async function createPostCopyOnce(theme: ScheduledTheme, sourceText: string, extraInstruction?: string): Promise<GeneratedDraft> {
   const draft = await invokeClaudeJSON<Omit<GeneratedDraft, "eyebrow">>({
     model: "claude-sonnet-5",
-    maxTokens: 1800,
+    maxTokens: 3000,
     toolName: "submit_instagram_draft",
     toolDescription: "Instagramカルーセル投稿の草案を提出する",
     schema: DRAFT_SCHEMA,
@@ -85,8 +85,14 @@ async function createPostCopyOnce(theme: ScheduledTheme, sourceText: string, ext
 ${sourceText}
 --- 参照テキストここまで ---
 
-primarySubjectには単一の悩み・治療・告知だけを12文字以内で記載してください。既存の投稿基準は、上品・清潔・静かな高級感です。imageSearchQueryは、表紙に使う実写ストック写真（Adobe Stock検索用）を探すための英語の短い検索クエリにしてください（例: "calm asian woman skin closeup natural daylight"）。${extraInstruction ?? ""}`,
+primarySubjectには単一の悩み・治療・告知だけを12文字以内で記載してください。既存の投稿基準は、上品・清潔・静かな高級感です。imageSearchQueryは、表紙のAI画像生成に渡す被写体の説明を英語で作ってください。必ず"beautiful, elegant Japanese woman"を含め、テーマに合う年齢層・表情も加えてください（例: "beautiful, elegant Japanese woman in her 30s, calm confident expression, radiant skin"）。${extraInstruction ?? ""}`,
   });
+
+  const missingFields = (["primarySubject", "topic", "treatmentTheme", "headline", "subheadline", "caption", "hashtags", "imageSearchQuery", "complianceNotes"] as const)
+    .filter(field => draft[field] === undefined);
+  if (missingFields.length > 0) {
+    throw new Error(`Claude応答に必須項目が欠けています（トークン上限で打ち切られた可能性があります）: ${missingFields.join(", ")}`);
+  }
 
   const combined = `${draft.headline} ${draft.subheadline} ${draft.caption} ${draft.hashtags.join(" ")}`;
   assertNoBannedPatterns(combined);
@@ -179,7 +185,7 @@ async function createCarouselSlideCopyOnce(
   extraInstruction?: string
 ): Promise<GeneratedCarouselSlide[]> {
   const result = await invokeClaudeJSON<{ slides: Array<{ order: number; title: string; body: string }> }>({
-    maxTokens: 1500,
+    maxTokens: 3000,
     toolName: "submit_carousel_slides",
     toolDescription: "カルーセル各ページのtitle/bodyを提出する",
     schema: SLIDE_COPY_SCHEMA,
