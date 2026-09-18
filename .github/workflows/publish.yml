@@ -23,8 +23,12 @@ jobs:
         with:
           node-version: "20"
       - run: npm ci
-      - run: npx tsx scripts/publish-approved.ts "${{ github.event.issue.number }}" "${{ github.event.comment.body }}"
+      - run: npx tsx scripts/publish-approved.ts
         env:
+          # Passed as env vars, never interpolated into the shell command line: this
+          # repo is public, so github.event.comment.body is attacker-controlled input.
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           META_IG_ACCESS_TOKEN: ${{ secrets.META_IG_ACCESS_TOKEN }}
           META_IG_PROFESSIONAL_ACCOUNT_ID: ${{ secrets.META_IG_PROFESSIONAL_ACCOUNT_ID }}

@@ -8,9 +8,12 @@ import { appendPostHistory } from "../src/state/history";
 type Manifest = { draftId: string; subject: string; caption: string; hashtags: string[]; slides: Array<{ order: number; fileName: string }> };
 
 async function main() {
-  const issueNumber = Number(process.argv[2]);
-  const commentBody = process.argv[3] ?? "";
-  if (!issueNumber) throw new Error("使い方: tsx scripts/publish-approved.ts <issueNumber> <commentBody>");
+  // Read from env vars, not argv/shell interpolation: github.event.comment.body is
+  // attacker-controlled on a PUBLIC repo (anyone can comment), so it must never be
+  // spliced into a `run:` shell command line — that's a classic script-injection hole.
+  const issueNumber = Number(process.env.ISSUE_NUMBER);
+  const commentBody = process.env.COMMENT_BODY ?? "";
+  if (!issueNumber) throw new Error("ISSUE_NUMBER environment variable is required.");
 
   if (!isApprovalComment(commentBody)) {
     console.log(`承認コメントではないため何もしません: "${commentBody}"`);
