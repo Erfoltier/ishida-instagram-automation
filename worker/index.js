@@ -160,12 +160,17 @@ async function doLogin() {
 }
 
 async function loadDrafts() {
-  const res = await fetch('/api/drafts');
-  if (res.status === 401) { document.getElementById('login').style.display = 'block'; document.getElementById('app').style.display = 'none'; return; }
-  const drafts = await res.json();
   const container = document.getElementById('drafts');
-  if (drafts.length === 0) { container.innerHTML = '<p>承認待ちの投稿案はありません。</p>'; return; }
-  container.innerHTML = drafts.map(renderDraft).join('');
+  try {
+    const res = await fetch('/api/drafts');
+    if (res.status === 401) { document.getElementById('login').style.display = 'block'; document.getElementById('app').style.display = 'none'; return; }
+    const data = await res.json();
+    if (!res.ok) { container.innerHTML = '<p>エラー: ' + escapeHtml(data.error || res.status) + '</p>'; return; }
+    if (!Array.isArray(data) || data.length === 0) { container.innerHTML = '<p>承認待ちの投稿案はありません。</p>'; return; }
+    container.innerHTML = data.map(renderDraft).join('');
+  } catch (err) {
+    container.innerHTML = '<p>読み込みエラー: ' + escapeHtml(String(err)) + '</p>';
+  }
 }
 
 function renderDraft(draft) {
@@ -244,27 +249,32 @@ loadDrafts();
 
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
+    try {
+      const url = new URL(request.url);
 
-    if (url.pathname === "/login" && request.method === "POST") {
-      const { passcode } = await request.json();
-      if (passcode !== env.STAFF_PASSCODE) return jsonResponse({ error: "invalid" }, { status: 401 });
-      return new Response(JSON.stringify({ ok: true }), {
-        headers: {
-          "content-type": "application/json",
-          "set-cookie": `staff_auth=${encodeURIComponent(passcode)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`,
-        },
-      });
-    }
-
-    if (url.pathname.startsWith("/api/")) {
-      try {
-        return await handleApi(request, env, url);
-      } catch (error) {
-        return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, { status: 500 });
+      if (url.pathname === "/login" && request.method === "POST") {
+        const { passcode } = await request.json();
+        if (passcode !== env.STAFF_PASSCODE) return jsonResponse({ error: "invalid" }, { status: 401 });
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: {
+            "content-type": "application/json",
+            "set-cookie": `staff_auth=${encodeURIComponent(passcode)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`,
+          },
+        });
       }
-    }
 
-    return new Response(PAGE_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
+      if (url.pathname.startsWith("/api/")) {
+        try {
+          return await handleApi(request, env, url);
+        } catch (error) {
+          return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, { status: 500 });
+        }
+      }
+
+      return new Response(PAGE_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
+    } catch (error) {
+      // Surface the real cause instead of Cloudflare's generic blank error page.
+      return new Response(`Worker error: ${error instanceof Error ? error.stack : String(error)}`, { status: 500 });
+    }
   },
 };
