@@ -26,6 +26,8 @@ async function ghFetch(env, path, init = {}) {
       authorization: `Bearer ${env.GH_TOKEN}`,
       accept: "application/vnd.github+json",
       "content-type": "application/json",
+      // GitHub's REST API rejects requests with no User-Agent (403); Workers' fetch doesn't set one by default.
+      "user-agent": "ishida-instagram-staff-worker",
       ...init.headers,
     },
   });
