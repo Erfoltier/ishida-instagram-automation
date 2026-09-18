@@ -33,17 +33,6 @@ export type GeneratedDraft = {
   complianceNotes: string;
 };
 
-function getThemeEyebrow(theme: string) {
-  const normalized = theme.toLowerCase();
-  if (normalized.includes("紫外線") || normalized.includes("uv")) return "UV CARE";
-  if (normalized.includes("毛穴") || normalized.includes("くすみ")) return "PORE CARE";
-  if (normalized.includes("ニキビ")) return "ACNE CARE";
-  if (normalized.includes("シミ") || normalized.includes("肝斑")) return "SPOT CARE";
-  if (normalized.includes("赤ら顔")) return "REDNESS CARE";
-  if (normalized.includes("乾燥") || normalized.includes("ゆらぎ")) return "DRY SKIN CARE";
-  return "SKIN CARE";
-}
-
 function assertNoBannedPatterns(combinedText: string) {
   const matched = BANNED_PATTERNS.filter(pattern => new RegExp(pattern, "i").test(combinedText));
   if (matched.length > 0) throw new MedicalAdvertisingCopyError(matched);
@@ -113,7 +102,7 @@ primarySubjectには単一の悩み・治療・告知だけを12文字以内で�
 
   return {
     ...draft,
-    eyebrow: getThemeEyebrow(draft.treatmentTheme),
+    eyebrow: theme.category.label,
     hashtags,
     caption: `${draft.caption.trim()}${FIXED_CLOSING}`,
   };
