@@ -27,6 +27,7 @@ async function main() {
   const manifest = {
     draftId,
     subject: theme.subject,
+    eyebrow: draft.eyebrow,
     caption: draft.caption,
     hashtags: draft.hashtags,
     complianceNotes: draft.complianceNotes,

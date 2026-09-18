@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { execSync } from "node:child_process";
 import { createDraftApprovalIssue } from "../src/approval/issue";
 import { buildRawGithubUrl } from "../src/publish/instagramGraph";
 
@@ -22,12 +21,12 @@ async function main() {
 
   const repository = process.env.GITHUB_REPOSITORY;
   if (!repository) throw new Error("GITHUB_REPOSITORY is not configured.");
-  // The commit that just pushed drafts/<draftId>/ — must run AFTER git push.
-  const commitSha = execSync("git rev-parse HEAD").toString().trim();
-
+  // Branch ref (not a pinned commit SHA): a later text edit (regenerate-slide.yml)
+  // overwrites the same file on main, and this URL should pick up that update
+  // without anyone having to go edit the issue body.
   const imageUrls = manifest.slides
     .sort((a, b) => a.order - b.order)
-    .map(slide => buildRawGithubUrl(repository, commitSha, `drafts/${draftId}/${slide.fileName}`));
+    .map(slide => buildRawGithubUrl(repository, "main", `drafts/${draftId}/${slide.fileName}`));
 
   const { issueNumber, url } = await createDraftApprovalIssue({
     draftId: manifest.draftId,

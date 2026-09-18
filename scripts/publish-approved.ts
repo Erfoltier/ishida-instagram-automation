@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { execSync } from "node:child_process";
 import { getIssueBody, extractDraftIdFromIssueBody, isApprovalComment, commentOnIssue, closeIssue } from "../src/approval/issue";
 import { publishCarouselPost, buildRawGithubUrl } from "../src/publish/instagramGraph";
 import { appendPostHistory } from "../src/state/history";
@@ -26,10 +25,9 @@ async function main() {
 
   const repository = process.env.GITHUB_REPOSITORY;
   if (!repository) throw new Error("GITHUB_REPOSITORY is not configured.");
-  const commitSha = execSync("git rev-parse HEAD").toString().trim();
   const imageUrls = manifest.slides
     .sort((a, b) => a.order - b.order)
-    .map(slide => buildRawGithubUrl(repository, commitSha, `drafts/${draftId}/${slide.fileName}`));
+    .map(slide => buildRawGithubUrl(repository, "main", `drafts/${draftId}/${slide.fileName}`));
 
   const caption = `${manifest.caption}\n\n${manifest.hashtags.join(" ")}`;
 

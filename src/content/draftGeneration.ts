@@ -49,6 +49,14 @@ function assertNoBannedPatterns(combinedText: string) {
   if (matched.length > 0) throw new MedicalAdvertisingCopyError(matched);
 }
 
+/** Same compliance/length checks the generator applies, exposed for staff-edited text (scripts/regenerate-slide.ts). */
+export function validateSlideText(title: string, body: string): void {
+  if (!title.trim() || !body.trim()) throw new Error("タイトル・本文を空にはできません。");
+  if (title.length > 42) throw new Error("タイトルは42文字以内にしてください。");
+  if (body.length > 100) throw new Error("本文は100文字以内にしてください。");
+  assertNoBannedPatterns(`${title} ${body}`);
+}
+
 const DRAFT_SCHEMA = {
   type: "object",
   properties: {
@@ -68,7 +76,7 @@ const DRAFT_SCHEMA = {
 async function createPostCopyOnce(theme: ScheduledTheme, sourceText: string, extraInstruction?: string): Promise<GeneratedDraft> {
   const draft = await invokeClaudeJSON<Omit<GeneratedDraft, "eyebrow">>({
     model: "claude-sonnet-5",
-    maxTokens: 3000,
+    maxTokens: 8192,
     toolName: "submit_instagram_draft",
     toolDescription: "Instagramカルーセル投稿の草案を提出する",
     schema: DRAFT_SCHEMA,
@@ -185,7 +193,7 @@ async function createCarouselSlideCopyOnce(
   extraInstruction?: string
 ): Promise<GeneratedCarouselSlide[]> {
   const result = await invokeClaudeJSON<{ slides: Array<{ order: number; title: string; body: string }> }>({
-    maxTokens: 3000,
+    maxTokens: 8192,
     toolName: "submit_carousel_slides",
     toolDescription: "カルーセル各ページのtitle/bodyを提出する",
     schema: SLIDE_COPY_SCHEMA,

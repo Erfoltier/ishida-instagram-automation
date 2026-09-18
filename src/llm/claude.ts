@@ -32,7 +32,10 @@ export async function invokeClaudeJSON<T>(params: {
     tools: [{ name: params.toolName, description: params.toolDescription, input_schema: params.schema as Anthropic.Tool.InputSchema }],
     tool_choice: { type: "tool", name: params.toolName },
   });
+  if (response.stop_reason === "max_tokens") {
+    throw new Error(`Claude応答がmax_tokens上限で打ち切られました（現在の上限: ${params.maxTokens ?? 2000}）。maxTokensを増やしてください。`);
+  }
   const toolUse = response.content.find((block): block is Anthropic.ToolUseBlock => block.type === "tool_use");
-  if (!toolUse) throw new Error("Claude応答にtool_useブロックが含まれていません。");
+  if (!toolUse) throw new Error(`Claude応答にtool_useブロックが含まれていません（stop_reason: ${response.stop_reason}）。`);
   return toolUse.input as T;
 }

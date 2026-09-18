@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import type { GeneratedDraft, GeneratedCarouselSlide } from "../content/draftGeneration";
 import { buildLayoutSvg, buildCarouselInformationSvg } from "./svg";
@@ -13,6 +13,8 @@ export type RenderedSlide = {
   filePath: string;
   fileName: string;
 };
+
+const COVER_SOURCE_FILE_NAME = "cover-source.jpg";
 
 function pixelAt(data: Buffer, x: number, y: number) {
   const offset = (y * 1080 + x) * 3;
@@ -36,11 +38,11 @@ async function validateBrandTemplate(image: Buffer) {
   }
 }
 
-async function renderCoverSlide(draft: GeneratedDraft, slide: Pick<GeneratedCarouselSlide, "title" | "body">): Promise<Buffer> {
-  const photo = await coverPhotoProvider.getCoverPhoto(draft.imageSearchQuery);
+/** Composites a (possibly cached) photo with the headline/subheadline overlay. No network call. */
+async function compositeCoverSlide(photo: Buffer, eyebrow: string, title: string, body: string): Promise<Buffer> {
   const composited = await sharp(photo)
     .resize(1080, 1080, { fit: "cover", position: "right" })
-    .composite([{ input: Buffer.from(buildLayoutSvg({ eyebrow: draft.eyebrow, headline: slide.title, subheadline: slide.body })), top: 0, left: 0 }])
+    .composite([{ input: Buffer.from(buildLayoutSvg({ eyebrow, headline: title, subheadline: body })), top: 0, left: 0 }])
     .jpeg({ quality: 92, chromaSubsampling: "4:4:4" })
     .toBuffer();
   await validateBrandTemplate(composited);
@@ -55,20 +57,52 @@ async function renderInformationSlide(slide: GeneratedCarouselSlide, eyebrow: st
   return rendered;
 }
 
+function draftDirFor(draftId: string) {
+  return path.join(process.cwd(), "drafts", draftId);
+}
+
 /** Renders all slides and writes them under drafts/<draftId>/. The caller (generate-draft.ts) commits this folder. */
 export async function renderCarouselSlides(draftId: string, draft: GeneratedDraft, slides: GeneratedCarouselSlide[]): Promise<RenderedSlide[]> {
-  const draftDir = path.join(process.cwd(), "drafts", draftId);
+  const draftDir = draftDirFor(draftId);
   await mkdir(draftDir, { recursive: true });
+
+  // Fetch the AI cover photo once and keep the untouched source around, so a later
+  // text-only edit (see regenerateSlide below) can recomposite without another
+  // OpenAI call — that would cost money and silently swap the photo staff already liked.
+  let coverPhoto: Buffer | undefined;
 
   const rendered: RenderedSlide[] = [];
   for (const slide of slides) {
-    const buffer = slide.kind === "cover"
-      ? await renderCoverSlide(draft, slide)
-      : await renderInformationSlide(slide, draft.eyebrow);
+    let buffer: Buffer;
+    if (slide.kind === "cover") {
+      coverPhoto ??= await coverPhotoProvider.getCoverPhoto(draft.imageSearchQuery);
+      await writeFile(path.join(draftDir, COVER_SOURCE_FILE_NAME), coverPhoto);
+      buffer = await compositeCoverSlide(coverPhoto, draft.eyebrow, slide.title, slide.body);
+    } else {
+      buffer = await renderInformationSlide(slide, draft.eyebrow);
+    }
     const fileName = `slide-${String(slide.order).padStart(2, "0")}.jpg`;
     const filePath = path.join(draftDir, fileName);
     await writeFile(filePath, buffer);
     rendered.push({ order: slide.order, kind: slide.kind, title: slide.title, body: slide.body, filePath, fileName });
   }
   return rendered;
+}
+
+/**
+ * Re-renders ONE slide with edited title/body (staff web UI "edit" action). For the
+ * cover slide this reuses the saved source photo instead of generating a new one.
+ * Overwrites the existing slide file in place; caller commits the change.
+ */
+export async function regenerateSlide(
+  draftId: string,
+  slide: Pick<GeneratedCarouselSlide, "order" | "kind" | "title" | "body">,
+  eyebrow: string
+): Promise<void> {
+  const draftDir = draftDirFor(draftId);
+  const buffer = slide.kind === "cover"
+    ? await compositeCoverSlide(await readFile(path.join(draftDir, COVER_SOURCE_FILE_NAME)), eyebrow, slide.title, slide.body)
+    : await renderInformationSlide(slide as GeneratedCarouselSlide, eyebrow);
+  const fileName = `slide-${String(slide.order).padStart(2, "0")}.jpg`;
+  await writeFile(path.join(draftDir, fileName), buffer);
 }

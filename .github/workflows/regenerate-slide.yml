@@ -1,0 +1,43 @@
+name: Regenerate slide text
+
+on:
+  workflow_dispatch:
+    inputs:
+      draft_id:
+        required: true
+        type: string
+      slide_order:
+        required: true
+        type: string
+      slide_title:
+        required: true
+        type: string
+      slide_body:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+      - run: npx tsx scripts/regenerate-slide.ts
+        env:
+          DRAFT_ID: ${{ inputs.draft_id }}
+          SLIDE_ORDER: ${{ inputs.slide_order }}
+          SLIDE_TITLE: ${{ inputs.slide_title }}
+          SLIDE_BODY: ${{ inputs.slide_body }}
+      - run: |
+          git config user.name "ishida-instagram-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add drafts
+          git diff --cached --quiet || git commit -m "edit: ${{ inputs.draft_id }} slide ${{ inputs.slide_order }}"
+          git push
