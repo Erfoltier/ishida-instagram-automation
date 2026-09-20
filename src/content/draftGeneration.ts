@@ -3,10 +3,12 @@ import type { CarouselSlidePlan, CarouselSlideKind } from "./carouselPlan";
 import type { ScheduledTheme } from "./themes";
 
 const LINE_URL = "https://lin.ee/OFlfdeH";
-const FIXED_CLOSING = `\n\nご予約・ご相談は、プロフィールの公式LINEから承っています。\n${LINE_URL}\n※DMでは個別の診療相談・予約を承っていません。`;
+const CLINIC_INFO_BLOCK = "いしだ皮フ科・美容皮膚科\n東大宮駅東口 徒歩1分\n美容診療：水曜・祝日・特別診療日／予約制";
+const BOOKING_BLOCK = `ご予約・ご相談はプロフィールの公式LINEから承っています。\n${LINE_URL}\n※DMでは個別の診療相談・予約を承っていません。`;
 const BANNED_PATTERNS = [
   "必ず", "絶対", "完治", "治る", "最安", "No\\.1", "ナンバーワン", "症例写真", "ビフォー", "アフター",
   "最短", "永久", "劇的", "保証", "限定価格", "診察室", "院内写真",
+  "地域最安", "絶対お得", "一瞬で", "放置すると手遅れ", "人気No", "効果人気",
 ];
 /** Stock AI-cliche phrases the grounded prompt should never fall back to when the source text runs out. */
 const AI_CLICHE_PATTERNS = [
@@ -62,6 +64,21 @@ const DRAFT_SCHEMA = {
   required: ["primarySubject", "topic", "treatmentTheme", "headline", "subheadline", "caption", "hashtags", "imageSearchQuery", "complianceNotes"],
 } as const;
 
+function imageSubjectInstruction(theme: ScheduledTheme): string {
+  // Persona C = men 20-39 (per the strategy doc's persona table) — the cover
+  // photo's subject should match, not default to a woman for every article.
+  return theme.persona === "C"
+    ? `必ず"handsome, well-groomed Japanese man"を含め、テーマに合う年齢層・表情も加えてください（例: "handsome, well-groomed Japanese man in his late 20s, calm confident expression"）。`
+    : `必ず"beautiful, elegant Japanese woman"を含め、テーマに合う年齢層・表情も加えてください（例: "beautiful, elegant Japanese woman in her 30s, calm confident expression, radiant skin"）。`;
+}
+
+function coverInstruction(theme: ScheduledTheme): string {
+  if (theme.coverStyle === "narrative") {
+    return `この記事は読み物型です。headlineは読者の具体的な悩み・疑問だけを短い日本語（15〜26文字）で表現し、答えや理由や「〜が異なります」等の説明を一切含めないでください。疑問形または具体的な場面提示にし、「実は」「知らないと損」「していませんか」ばかりを繰り返さない。subheadlineは空文字列（""）にしてください——表紙で答えを明かさないためです。答えは2枚目以降で示します。`;
+  }
+  return `この記事はお知らせ型です。headlineとsubheadlineで、日程・アクセス・予約方法など必要な情報を直接伝えてください（疑問形にする必要はありません）。`;
+}
+
 async function createPostCopyOnce(theme: ScheduledTheme, sourceText: string, extraInstruction?: string): Promise<GeneratedDraft> {
   const draft = await invokeClaudeJSON<Omit<GeneratedDraft, "eyebrow">>({
     model: "claude-sonnet-5",
@@ -69,20 +86,21 @@ async function createPostCopyOnce(theme: ScheduledTheme, sourceText: string, ext
     toolName: "submit_instagram_draft",
     toolDescription: "Instagramカルーセル投稿の草案を提出する",
     schema: DRAFT_SCHEMA,
-    system: `あなたは埼玉県東大宮の美容皮膚科のSNS編集者です。日本の医療広告ガイドラインに配慮し、誠実で上品な投稿案を作成します。架空の診察室・院内写真、医師の顔を中心に売り込む表現、ビフォーアフター、患者体験談、誇大表現、効果保証、価格訴求、限定訴求は禁止です。
+    system: `あなたは埼玉県東大宮の美容皮膚科のSNS編集者です。日本の医療広告ガイドラインに配慮し、誠実で上品な投稿案を作成します。架空の診察室・院内写真、医師の顔を中心に売り込む表現、ビフォーアフター、患者体験談、誇大表現、効果保証、価格訴求、限定訴求、根拠のない比較優位（「地域最安」「絶対お得」等）、過度な恐怖や羞恥、偽の希少性は禁止です。
 
 最重要: 文章は「AIが書いたテンプレート」に見えてはいけません。以下は必ず守ってください。
 - 下に渡す「参照テキスト（公式サイトの実際の記載）」に書かれている事実だけを根拠にする。参照テキストにない効果・数値・保証を作り出さない。
 - 「人それぞれです」「選択肢を検討しましょう」のような、何も言っていない一般論の締めくくりを使わない。必ず参照テキストから拾った具体的な情報（原因の名称、比較対象、回数の目安、対象者の具体例など）を書く。
 - 一文一文が、その投稿でしか成立しない具体的な内容になっているか自問し、他のどんなテーマにも使い回せる文なら書き直す。
-- 地域SEOとして埼玉、大宮、東大宮を含むハッシュタグを8〜10個作る。`,
-    user: `今回の投稿テーマは「${theme.subject}」です。${theme.request}
+- 地域SEOとして埼玉、大宮、東大宮を含むハッシュタグを8〜10個作る。
+- captionは本文約10行を目安に、画像より詳しい説明を書く。「まずは相談」だけで終わらせず、対象・方法・費用・期間・制限・リスクのうち画像にない新しい情報を加える。`,
+    user: `今回の投稿テーマは「${theme.subject}」（記事ID: ${theme.articleId}、対象読者: ${theme.persona}）です。${theme.request}
 
 --- 参照テキスト（当院公式サイトの実際の記載。この内容だけを根拠にすること） ---
 ${sourceText}
 --- 参照テキストここまで ---
 
-primarySubjectには単一の悩み・治療・告知だけを12文字以内で記載してください。既存の投稿基準は、上品・清潔・静かな高級感です。imageSearchQueryは、表紙のAI画像生成に渡す被写体の説明を英語で作ってください。必ず"beautiful, elegant Japanese woman"を含め、テーマに合う年齢層・表情も加えてください（例: "beautiful, elegant Japanese woman in her 30s, calm confident expression, radiant skin"）。${extraInstruction ?? ""}`,
+primarySubjectには単一の悩み・治療・告知だけを12文字以内で記載してください。既存の投稿基準は、上品・清潔・静かな高級感です。${coverInstruction(theme)}imageSearchQueryは、表紙のAI画像生成に渡す被写体の説明を英語で作ってください。${imageSubjectInstruction(theme)}${extraInstruction ?? ""}`,
   });
 
   const missingFields = (["primarySubject", "topic", "treatmentTheme", "headline", "subheadline", "caption", "hashtags", "imageSearchQuery", "complianceNotes"] as const)
@@ -91,7 +109,12 @@ primarySubjectには単一の悩み・治療・告知だけを12文字以内で�
     throw new Error(`Claude応答に必須項目が欠けています（トークン上限で打ち切られた可能性があります）: ${missingFields.join(", ")}`);
   }
 
-  const combined = `${draft.headline} ${draft.subheadline} ${draft.caption} ${draft.hashtags.join(" ")}`;
+  // Force-empty rather than trust prompt compliance alone: narrative covers must
+  // never reveal the answer (strategy doc ch.13), so discard whatever the model
+  // wrote here if the theme is narrative-type.
+  const subheadline = theme.coverStyle === "narrative" ? "" : draft.subheadline;
+
+  const combined = `${draft.headline} ${subheadline} ${draft.caption} ${draft.hashtags.join(" ")}`;
   assertNoBannedPatterns(combined);
 
   const hashtags = Array.from(new Set(
@@ -100,11 +123,16 @@ primarySubjectには単一の悩み・治療・告知だけを12文字以内で�
     )
   )).slice(0, 10);
 
+  const primarySourceUrl = theme.sourceUrls[0];
+  const eyebrowBase = theme.category?.label ?? "NEWS";
+  const eyebrow = theme.requiresManualPhoto ? `${eyebrowBase} ・ 症例写真差し替え要` : eyebrowBase;
+
   return {
     ...draft,
-    eyebrow: theme.category.label,
+    subheadline,
+    eyebrow,
     hashtags,
-    caption: `${draft.caption.trim()}${FIXED_CLOSING}`,
+    caption: `${draft.caption.trim()}\n\n${primarySourceUrl}\n\n${CLINIC_INFO_BLOCK}\n\n${BOOKING_BLOCK}`,
   };
 }
 

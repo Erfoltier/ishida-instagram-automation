@@ -26,16 +26,17 @@ function isNearColor(actual: readonly number[], expected: readonly number[], tol
   return actual.every((channel, index) => Math.abs(channel - (expected[index] ?? 0)) <= tolerance);
 }
 
+// Brand palette (2026-09-20 revision): gold #A58B62, wine-red accent #925D66, ivory #FFFAFA.
 async function validateBrandTemplate(image: Buffer) {
   const { data, info } = await sharp(image).raw().toBuffer({ resolveWithObject: true });
   if (info.width !== 1080 || info.height !== 1080 || info.channels !== 3) {
     throw new Error("画像のサイズまたはカラーチャンネルが基準外です。");
   }
-  const hasGoldRule = isNearColor(pixelAt(data, 75, 500), [184, 160, 96], 16);
-  const hasTealRule = isNearColor(pixelAt(data, 100, 102), [61, 98, 112], 16);
-  const hasIvoryPanel = isNearColor(pixelAt(data, 240, 760), [251, 250, 246], 16);
-  if (!hasGoldRule || !hasTealRule || !hasIvoryPanel) {
-    throw new Error("固定デザインの品質基準（ゴールドライン・チークライン・アイボリーパネル）を満たしていません。");
+  const hasGoldRule = isNearColor(pixelAt(data, 75, 500), [165, 139, 98], 16);
+  const hasAccentRule = isNearColor(pixelAt(data, 100, 102), [146, 93, 102], 16);
+  const hasIvoryPanel = isNearColor(pixelAt(data, 240, 760), [255, 250, 250], 16);
+  if (!hasGoldRule || !hasAccentRule || !hasIvoryPanel) {
+    throw new Error("固定デザインの品質基準（ゴールドライン・アクセントライン・アイボリーパネル）を満たしていません。");
   }
 }
 
@@ -100,8 +101,24 @@ function draftDirFor(draftId: string) {
   return path.join(process.cwd(), "drafts", draftId);
 }
 
+/**
+ * Plain placeholder "photo" for case-study articles (strategy doc ch.9: never
+ * AI-generate before/after or case-result imagery). Staff replace
+ * drafts/<id>/slide-01.jpg with a real, consented photo via GitHub's file
+ * upload before approving — the eyebrow badge is also flagged (see
+ * draftGeneration.ts) so this is obvious in the approval Issue.
+ */
+async function createPlaceholderPhoto(): Promise<Buffer> {
+  return sharp({ create: { width: 1080, height: 1080, channels: 3, background: { r: 214, g: 204, b: 202 } } }).jpeg().toBuffer();
+}
+
 /** Renders all slides and writes them under drafts/<draftId>/. The caller (generate-draft.ts) commits this folder. */
-export async function renderCarouselSlides(draftId: string, draft: GeneratedDraft, slides: GeneratedCarouselSlide[]): Promise<RenderedSlide[]> {
+export async function renderCarouselSlides(
+  draftId: string,
+  draft: GeneratedDraft,
+  slides: GeneratedCarouselSlide[],
+  requiresManualPhoto = false
+): Promise<RenderedSlide[]> {
   const draftDir = draftDirFor(draftId);
   await mkdir(draftDir, { recursive: true });
 
@@ -114,7 +131,7 @@ export async function renderCarouselSlides(draftId: string, draft: GeneratedDraf
   for (const slide of slides) {
     let buffer: Buffer;
     if (slide.kind === "cover") {
-      coverPhoto ??= await coverPhotoProvider.getCoverPhoto(draft.imageSearchQuery);
+      coverPhoto ??= requiresManualPhoto ? await createPlaceholderPhoto() : await coverPhotoProvider.getCoverPhoto(draft.imageSearchQuery);
       await writeFile(path.join(draftDir, COVER_SOURCE_FILE_NAME), coverPhoto);
       buffer = await compositeCoverSlide(coverPhoto, draft.eyebrow, slide.title, slide.body);
     } else {

@@ -47,39 +47,90 @@ function splitCarouselText(value: string, maxLineLength = 15) {
   return lines.slice(0, 3);
 }
 
+/**
+ * Brand palette (2026-09-20 revision, per the strategy doc's chapter 9):
+ * ivory background, wine-red accent (was blue-gray/teal), warm gold rule line,
+ * near-black body text, dusty-rose sub-accent for borders/tints. Font switched
+ * from Gothic (Noto Sans) to Mincho (Noto Serif) for all on-image text.
+ */
+const INK = "#3C3033";
+const ACCENT = "#925D66";
+const SUB_ACCENT = "#C98F96";
+const GOLD = "#A58B62";
+const IVORY = "#FFFAFA";
+const IVORY_PANEL = "#FBF4F3";
+const FONT = "'Noto Serif CJK JP', 'Noto Serif JP', serif";
+
 const CLINIC_STYLE = `
 <style>
-  .eyebrow { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 24px; font-weight: 700; letter-spacing: 7px; fill: #3D6270; }
-  .headline { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 54px; font-weight: 700; letter-spacing: -1px; fill: #1F292E; }
-  .sub { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 25px; font-weight: 400; fill: #3D6270; }
-  .clinic { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 24px; font-weight: 700; fill: #1F292E; }
-  .station { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 18px; font-weight: 400; fill: #3D6270; }
+  .eyebrow { font-family: ${FONT}; font-size: 24px; font-weight: 700; letter-spacing: 7px; fill: ${ACCENT}; }
+  .headline { font-family: ${FONT}; font-size: 54px; font-weight: 700; letter-spacing: -1px; fill: ${INK}; }
+  .sub { font-family: ${FONT}; font-size: 25px; font-weight: 400; fill: ${ACCENT}; }
+  .clinic { font-family: ${FONT}; font-size: 24px; font-weight: 700; fill: ${INK}; }
+  .station { font-family: ${FONT}; font-size: 18px; font-weight: 400; fill: ${ACCENT}; }
+  .priceLabel { font-family: ${FONT}; font-size: 22px; font-weight: 400; fill: ${ACCENT}; }
+  .priceValue { font-family: ${FONT}; font-size: 64px; font-weight: 700; fill: ${INK}; }
+  .priceNote { font-family: ${FONT}; font-size: 20px; font-weight: 400; fill: ${ACCENT}; }
 </style>`;
 
-/** Cover slide: ivory information panel composited over a photo (AI-generated or licensed stock — see render/coverImage.ts). */
-export function buildLayoutSvg(draft: Pick<GeneratedDraft, "eyebrow"> & { headline: string; subheadline: string }) {
+export type CoverPriceInfo = {
+  /** e.g. "医療脱毛（ヒゲ）" */
+  treatmentName: string;
+  /** e.g. "顔全体" */
+  targetArea: string;
+  /** e.g. "1回" */
+  unit: string;
+  /** e.g. "11,000円（税込）" */
+  price: string;
+  /** true if there are other pricing patterns/add-ons covered later in the carousel */
+  hasAdditionalFees: boolean;
+};
+
+/**
+ * Cover slide: ivory information panel composited over a photo (AI-generated or
+ * licensed stock — see render/coverImage.ts).
+ *
+ * Two modes, per the strategy doc's chapter 13:
+ * - Narrative (default): headline is the reader's specific worry/question only.
+ *   subheadline must NOT reveal the answer — pass "" to leave that space as
+ *   genuine whitespace rather than filling it with another conclusion.
+ * - Price (`priceInfo` provided): shows treatment/area/unit/price directly,
+ *   since price-menu posts should never hide the number behind a question hook.
+ */
+export function buildLayoutSvg(draft: Pick<GeneratedDraft, "eyebrow"> & { headline: string; subheadline: string; priceInfo?: CoverPriceInfo }) {
   const [line1, line2] = splitHeadline(draft.headline);
   const line2Svg = line2 ? `<text x="112" y="405" class="headline">${escapeXml(line2)}</text>` : "";
+  const subheadlineBlock = draft.priceInfo
+    ? `
+    <rect x="114" y="482" width="365" height="3" fill="${GOLD}"/>
+    <text x="114" y="545" class="priceLabel">${escapeXml(draft.priceInfo.targetArea)}／${escapeXml(draft.priceInfo.unit)}</text>
+    <text x="114" y="625" class="priceValue">${escapeXml(draft.priceInfo.price)}</text>
+    ${draft.priceInfo.hasAdditionalFees ? `<text x="114" y="665" class="priceNote">別途費用あり → 詳しくは次のページへ</text>` : ""}`
+    : draft.subheadline.trim()
+      ? `
+    <rect x="114" y="482" width="365" height="3" fill="${GOLD}"/>
+    <text x="114" y="545" class="sub">${escapeXml(draft.subheadline)}</text>`
+      : ""; // narrative cover with no answer to give away — leave as whitespace, per strategy doc ch.13
+
   return `
   <svg width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="veil" x1="0" x2="1" y1="0" y2="0">
-        <stop offset="0%" stop-color="#FBFAF6" stop-opacity="0.95"/>
-        <stop offset="55%" stop-color="#FBFAF6" stop-opacity="0.95"/>
-        <stop offset="70%" stop-color="#FBFAF6" stop-opacity="0.75"/>
-        <stop offset="88%" stop-color="#FBFAF6" stop-opacity="0.10"/>
-        <stop offset="100%" stop-color="#FBFAF6" stop-opacity="0"/>
+        <stop offset="0%" stop-color="${IVORY}" stop-opacity="0.95"/>
+        <stop offset="55%" stop-color="${IVORY}" stop-opacity="0.95"/>
+        <stop offset="70%" stop-color="${IVORY}" stop-opacity="0.75"/>
+        <stop offset="88%" stop-color="${IVORY}" stop-opacity="0.10"/>
+        <stop offset="100%" stop-color="${IVORY}" stop-opacity="0"/>
       </linearGradient>
     </defs>
     ${CLINIC_STYLE}
     <rect x="0" y="0" width="1080" height="1080" fill="url(#veil)"/>
-    <rect x="72" y="100" width="7" height="880" fill="#B8A060"/>
-    <rect x="78" y="100" width="546" height="6" fill="#3D6270"/>
+    <rect x="72" y="100" width="7" height="880" fill="${GOLD}"/>
+    <rect x="78" y="100" width="546" height="6" fill="${ACCENT}"/>
     <text x="116" y="164" class="eyebrow">${escapeXml(draft.eyebrow.toUpperCase())}</text>
     <text x="112" y="315" class="headline">${escapeXml(line1 ?? "")}</text>
     ${line2Svg}
-    <rect x="114" y="482" width="365" height="3" fill="#B8A060"/>
-    <text x="114" y="545" class="sub">${escapeXml(draft.subheadline)}</text>
+    ${subheadlineBlock}
     <text x="114" y="919" class="clinic">いしだ皮フ科・美容皮膚科</text>
     <text x="114" y="960" class="station">東大宮駅東口 徒歩1分</text>
   </svg>`;
@@ -127,29 +178,29 @@ export function buildCarouselInformationSvg(slide: GeneratedCarouselSlide, eyebr
   return `
   <svg width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
     <style>
-      .eyebrow { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 19px; font-weight: 700; letter-spacing: 4px; fill: #3D6270; }
-      .headline { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 48px; font-weight: 700; letter-spacing: -1px; fill: #1F292E; }
-      .body { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 27px; font-weight: 400; fill: #33424A; }
-      .bodyOnDark { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 27px; font-weight: 400; fill: #FBFAF6; }
-      .pageNumber { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 1px; fill: #B8A060; }
-      .pageTotal { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 20px; font-weight: 400; fill: #B8A88F; }
-      .reservation { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 22px; font-weight: 700; fill: #FBFAF6; }
-      .clinic { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 24px; font-weight: 700; fill: #1F292E; }
-      .station { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 18px; font-weight: 400; fill: #3D6270; }
+      .eyebrow { font-family: ${FONT}; font-size: 19px; font-weight: 700; letter-spacing: 4px; fill: ${ACCENT}; }
+      .headline { font-family: ${FONT}; font-size: 48px; font-weight: 700; letter-spacing: -1px; fill: ${INK}; }
+      .body { font-family: ${FONT}; font-size: 27px; font-weight: 400; fill: ${INK}; }
+      .bodyOnDark { font-family: ${FONT}; font-size: 27px; font-weight: 400; fill: ${IVORY}; }
+      .pageNumber { font-family: ${FONT}; font-size: 20px; font-weight: 700; letter-spacing: 1px; fill: ${GOLD}; }
+      .pageTotal { font-family: ${FONT}; font-size: 20px; font-weight: 400; fill: ${GOLD}; opacity: 0.55; }
+      .reservation { font-family: ${FONT}; font-size: 22px; font-weight: 700; fill: ${IVORY}; }
+      .clinic { font-family: ${FONT}; font-size: 24px; font-weight: 700; fill: ${INK}; }
+      .station { font-family: ${FONT}; font-size: 18px; font-weight: 400; fill: ${ACCENT}; }
     </style>
-    <rect x="0" y="0" width="1080" height="1080" fill="#FBFAF6"/>
+    <rect x="0" y="0" width="1080" height="1080" fill="${IVORY}"/>
     <g transform="${arcTransform}" opacity="0.14">
-      <circle cx="0" cy="0" r="360" fill="none" stroke="#B8A060" stroke-width="2"/>
+      <circle cx="0" cy="0" r="360" fill="none" stroke="${GOLD}" stroke-width="2"/>
     </g>
-    <rect x="72" y="100" width="7" height="880" fill="#B8A060"/>
-    <rect x="78" y="100" width="546" height="6" fill="#3D6270"/>
+    <rect x="72" y="100" width="7" height="880" fill="${GOLD}"/>
+    <rect x="78" y="100" width="546" height="6" fill="${ACCENT}"/>
     <text x="116" y="164" class="eyebrow">${escapeXml(eyebrow.toUpperCase())}</text>
     <text x="964" y="171" text-anchor="end" class="pageNumber">${String(slide.order).padStart(2, "0")}<tspan class="pageTotal"> / ${String(totalSlides).padStart(2, "0")}</tspan></text>
-    <circle cx="940" cy="230" r="46" fill="#3D6270"/>
+    <circle cx="940" cy="230" r="46" fill="${ACCENT}"/>
     <g transform="translate(940,230)">${getSlideIcon(slide.kind)}</g>
     ${titleSvg}
-    <rect x="114" y="452" width="365" height="3" fill="#B8A060"/>
-    <rect x="114" y="${boxY}" width="852" height="${boxHeight}" rx="16" fill="${isCta ? "#3D6270" : "#FFFFFF"}" stroke="${isCta ? "#3D6270" : "#E9E3D4"}" stroke-width="1.5"/>
+    <rect x="114" y="452" width="365" height="3" fill="${GOLD}"/>
+    <rect x="114" y="${boxY}" width="852" height="${boxHeight}" rx="16" fill="${isCta ? ACCENT : IVORY_PANEL}" stroke="${isCta ? ACCENT : SUB_ACCENT}" stroke-width="1.5"/>
     ${bodySvg}
     ${reservation}
     <text x="114" y="919" class="clinic">いしだ皮フ科・美容皮膚科</text>
@@ -181,14 +232,14 @@ export function buildPhotoOverlaySvg(slide: GeneratedCarouselSlide, eyebrow: str
   // pale clothing, etc.) gets a stronger scrim so white text stays legible instead
   // of washing out.
   const scrimStops = needsStrongScrim
-    ? `<stop offset="0%" stop-color="#1F292E" stop-opacity="0.08"/>
-       <stop offset="30%" stop-color="#1F292E" stop-opacity="0.38"/>
-       <stop offset="60%" stop-color="#1F292E" stop-opacity="0.78"/>
-       <stop offset="100%" stop-color="#1F292E" stop-opacity="0.95"/>`
-    : `<stop offset="0%" stop-color="#1F292E" stop-opacity="0"/>
-       <stop offset="38%" stop-color="#1F292E" stop-opacity="0.22"/>
-       <stop offset="70%" stop-color="#1F292E" stop-opacity="0.62"/>
-       <stop offset="100%" stop-color="#1F292E" stop-opacity="0.92"/>`;
+    ? `<stop offset="0%" stop-color="${INK}" stop-opacity="0.08"/>
+       <stop offset="30%" stop-color="${INK}" stop-opacity="0.38"/>
+       <stop offset="60%" stop-color="${INK}" stop-opacity="0.78"/>
+       <stop offset="100%" stop-color="${INK}" stop-opacity="0.95"/>`
+    : `<stop offset="0%" stop-color="${INK}" stop-opacity="0"/>
+       <stop offset="38%" stop-color="${INK}" stop-opacity="0.22"/>
+       <stop offset="70%" stop-color="${INK}" stop-opacity="0.62"/>
+       <stop offset="100%" stop-color="${INK}" stop-opacity="0.92"/>`;
 
   return `
   <svg width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
@@ -198,20 +249,20 @@ export function buildPhotoOverlaySvg(slide: GeneratedCarouselSlide, eyebrow: str
       </linearGradient>
     </defs>
     <style>
-      .pill { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 19px; font-weight: 700; letter-spacing: 2px; fill: #FFFFFF; }
-      .headline { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 54px; font-weight: 700; letter-spacing: -1px; fill: #FFFFFF; }
-      .bodyOnDark { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 27px; font-weight: 400; fill: #FBFAF6; }
-      .reservation { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 22px; font-weight: 700; fill: #FBFAF6; }
-      .clinic { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 24px; font-weight: 700; fill: #FFFFFF; }
-      .station { font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif; font-size: 18px; font-weight: 400; fill: #E9E3D4; }
+      .pill { font-family: ${FONT}; font-size: 19px; font-weight: 700; letter-spacing: 2px; fill: #FFFFFF; }
+      .headline { font-family: ${FONT}; font-size: 54px; font-weight: 700; letter-spacing: -1px; fill: #FFFFFF; }
+      .bodyOnDark { font-family: ${FONT}; font-size: 27px; font-weight: 400; fill: ${IVORY}; }
+      .reservation { font-family: ${FONT}; font-size: 22px; font-weight: 700; fill: ${IVORY}; }
+      .clinic { font-family: ${FONT}; font-size: 24px; font-weight: 700; fill: #FFFFFF; }
+      .station { font-family: ${FONT}; font-size: 18px; font-weight: 400; fill: ${SUB_ACCENT}; }
     </style>
     <rect x="0" y="0" width="1080" height="1080" fill="url(#scrim)"/>
-    <rect x="80" y="90" width="${eyebrow.length * 15 + 60}" height="46" rx="23" fill="#1F292E" fill-opacity="0.32" stroke="#FFFFFF" stroke-width="1.5" opacity="0.9"/>
+    <rect x="80" y="90" width="${eyebrow.length * 15 + 60}" height="46" rx="23" fill="${INK}" fill-opacity="0.32" stroke="#FFFFFF" stroke-width="1.5" opacity="0.9"/>
     <text x="${80 + (eyebrow.length * 15 + 60) / 2}" y="120" text-anchor="middle" class="pill">${escapeXml(eyebrow.toUpperCase())}</text>
-    <rect x="898" y="90" width="112" height="46" rx="23" fill="#1F292E" fill-opacity="0.32" stroke="#FFFFFF" stroke-width="1.5" opacity="0.9"/>
+    <rect x="898" y="90" width="112" height="46" rx="23" fill="${INK}" fill-opacity="0.32" stroke="#FFFFFF" stroke-width="1.5" opacity="0.9"/>
     <text x="954" y="120" text-anchor="middle" class="pill">${String(slide.order).padStart(2, "0")}/${String(totalSlides).padStart(2, "0")}</text>
     ${titleSvg}
-    <rect x="118" y="${460 + (titleLines.length - 1) * 68 + 32}" width="140" height="5" fill="#B8A060"/>
+    <rect x="118" y="${460 + (titleLines.length - 1) * 68 + 32}" width="140" height="5" fill="${GOLD}"/>
     ${bodySvg}
     ${reservation}
     <text x="116" y="919" class="clinic">いしだ皮フ科・美容皮膚科</text>

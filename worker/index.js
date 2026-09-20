@@ -61,6 +61,7 @@ async function listDrafts(env) {
       caption: manifest.caption,
       hashtags: manifest.hashtags,
       complianceNotes: manifest.complianceNotes,
+      requiresManualPhoto: manifest.requiresManualPhoto ?? false,
       slides: manifest.slides
         .sort((a, b) => a.order - b.order)
         .map(slide => ({ ...slide, imageUrl: rawUrl(env, `drafts/${draftId}/${slide.fileName}`) })),
@@ -179,10 +180,54 @@ const PAGE_HTML = `<!doctype html>
 <script>
 // Keep in sync with src/content/themes.ts SCHEDULED_THEME_CATALOG subjects.
 const THEME_SUBJECTS = [
-  "肝斑の見分け方", "シミの診断とケア", "医療脱毛の相談", "部分痩せの脂肪ケア",
-  "ニキビ跡の赤み", "ニキビ跡の凹み", "肌育による肌質相談", "目元のちりめんじわ",
-  "額のしわ", "首のしわ", "ほうれい線", "マリオネットライン", "医療HIFU",
-  "紫外線後のシミケア", "毛穴の目立ちにくいケア", "赤ら顔の相談",
+  { id: "M1-01", label: "M1-01 顔の茶色いシミは全部レーザーで取れるのか" },
+  { id: "M1-02", label: "M1-02 毛穴の黒ずみと凹みは同じ治療ではありません" },
+  { id: "M1-03", label: "M1-03 シミ1個と全顔まとめ取り 費用はどう違う" },
+  { id: "M1-04", label: "M1-04 赤い跡 茶色い跡 凹み跡 治療が違う理由" },
+  { id: "M1-05", label: "M1-05 日焼け止め 塗っているのに忘れやすい3つのこと" },
+  { id: "M1-06", label: "M1-06 ほうれい線とフェイスラインのたるみ 同じ治療でよいのか" },
+  { id: "M1-07", label: "M1-07 ニキビをつぶす前に 跡を増やさないためのケア" },
+  { id: "M1-08", label: "M1-08 シミ取り後 2週間で完成とは限りません" },
+  { id: "M1-09", label: "M1-09 シミ治療の実記録 選んだ理由と途中経過（症例・写真差し替え要）" },
+  { id: "M1-10", label: "M1-10 ヒゲ脱毛 レーザーとニードルはどう使い分ける" },
+  { id: "M1-11", label: "M1-11 ニキビ跡の実記録 何を治して何が残ったか（症例・写真差し替え要）" },
+  { id: "M1-12", label: "M1-12 東大宮で受けられる美容診療と予約先" },
+  { id: "M2-01", label: "M2-01 ルビー ピコ IPL 名前だけで選ばないシミ治療" },
+  { id: "M2-02", label: "M2-02 毛穴が気になる人にピーリングが向く場合" },
+  { id: "M2-03", label: "M2-03 肝斑があるとシミ取りレーザーは受けられないのか" },
+  { id: "M2-04", label: "M2-04 深い凹みのニキビ跡は治療を組み合わせる理由" },
+  { id: "M2-05", label: "M2-05 毛穴の黒ずみをこすり落とそうとしていませんか" },
+  { id: "M2-06", label: "M2-06 動かすと出るしわと常にある溝 治療の考え方" },
+  { id: "M2-07", label: "M2-07 レーザー脱毛前 毛抜きと剃毛は違います" },
+  { id: "M2-08", label: "M2-08 顔の肌育注射 翌日に予定を入れてもよいのか" },
+  { id: "M2-09", label: "M2-09 顔のしわ治療の実記録 注入量と変化の範囲（症例・写真差し替え要）" },
+  { id: "M2-10", label: "M2-10 シミとほくろ 除去の方法と料金を分ける理由" },
+  { id: "M2-11", label: "M2-11 毛穴治療の実記録 どの種類の毛穴を治したか（症例・写真差し替え要）" },
+  { id: "M2-12", label: "M2-12 翌月の美容診療日と確定した受付案内" },
+  { id: "M3-01", label: "M3-01 レーザー後の茶色はシミの残りとは限らない" },
+  { id: "M3-02", label: "M3-02 肌育注射とヒアルロン酸 何を変える治療なのか" },
+  { id: "M3-03", label: "M3-03 ニキビ跡治療 1回料金と治療全体の費用" },
+  { id: "M3-04", label: "M3-04 首の横じわ 細かいしわ たるみで治療が違う" },
+  { id: "M3-05", label: "M3-05 シミ治療後の紫外線対策 日常で気をつけること" },
+  { id: "M3-06", label: "M3-06 白い毛と残った毛 脱毛方法を見直す理由" },
+  { id: "M3-07", label: "M3-07 ゼオスキン 短期集中と維持期は同じケアなのか" },
+  { id: "M3-08", label: "M3-08 ヒアルロン酸の内出血と連絡が必要な症状" },
+  { id: "M3-09", label: "M3-09 シミ治療の長期経過 途中の色の変化を振り返る（症例・写真差し替え要）" },
+  { id: "M3-10", label: "M3-10 目の下のクマ 色と影で考え方が変わる" },
+  { id: "M3-11", label: "M3-11 凹み治療の実記録 組合せを選んだ理由（症例・写真差し替え要）" },
+  { id: "M3-12", label: "M3-12 翌月の診療日と記事別の読み方ガイド" },
+  { id: "M4-01", label: "M4-01 シミとくすみが重なるとき 治療を分ける理由" },
+  { id: "M4-02", label: "M4-02 毛穴とニキビ跡が混在するときの治療順" },
+  { id: "M4-03", label: "M4-03 シミ治療の追加照射は何で決まるのか" },
+  { id: "M4-04", label: "M4-04 顔のHIFU 部位や照射方法で何が違う" },
+  { id: "M4-05", label: "M4-05 乾燥する時期のスキンケア 増やす前に見直すこと" },
+  { id: "M4-06", label: "M4-06 首の治療は初期費用と維持費で比較する" },
+  { id: "M4-07", label: "M4-07 ニードル脱毛前は毛を伸ばす なぜ必要なのか" },
+  { id: "M4-08", label: "M4-08 ホームケアの初期費用と継続費用は同じか" },
+  { id: "M4-09", label: "M4-09 顔の治療の実記録 変化と残る課題を確認（症例・写真差し替え要）" },
+  { id: "M4-10", label: "M4-10 同じニキビ跡に同じ治療を続ければよいのか" },
+  { id: "M4-11", label: "M4-11 毛穴や肌質の実記録 回数と観察期間を示す（症例・写真差し替え要）" },
+  { id: "M4-12", label: "M4-12 翌月の診療日と4か月の人気テーマ案内" },
 ];
 
 async function doLogin() {
@@ -217,7 +262,7 @@ function renderView() {
     return;
   }
   selectedDraftId = null;
-  const themeOptions = THEME_SUBJECTS.map(subject => \`<option value="\${subject}">\${subject}</option>\`).join('');
+  const themeOptions = THEME_SUBJECTS.map(t => \`<option value="\${t.id}">\${escapeHtml(t.label)}</option>\`).join('');
   const header = \`<div class="actions" style="margin-bottom:16px; align-items:center;">
     <select id="theme-select" style="width:auto;">
       <option value="">おまかせ（自動選定）</option>
@@ -239,7 +284,7 @@ function renderListItem(draft) {
     \${cover ? \`<img src="\${cover.imageUrl}" alt="cover">\` : ''}
     <div class="meta">
       <div class="subject">\${escapeHtml(draft.subject)}</div>
-      <div class="status">Issue #\${draft.issueNumber} ・ \${draft.slides.length}枚</div>
+      <div class="status">Issue #\${draft.issueNumber} ・ \${draft.slides.length}枚\${draft.requiresManualPhoto ? ' ・ <span style="color:#a33;font-weight:700;">⚠️ 症例写真差し替え要</span>' : ''}</div>
     </div>
     <button onclick="event.stopPropagation(); viewDraft('\${draft.draftId}')">詳しく見る</button>
   </div>\`;
@@ -280,8 +325,9 @@ async function pollForResize(draftId, previousCount, attempt = 0) {
 async function generateNew() {
   const select = document.getElementById('theme-select');
   const themeSubject = select ? select.value : '';
+  const themeLabel = select ? select.options[select.selectedIndex].text : '';
   const confirmMessage = themeSubject
-    ? \`テーマ「\${themeSubject}」で投稿案の生成をリクエストします。1〜2分ほどかかります。よろしいですか？\`
+    ? \`テーマ「\${themeLabel}」で投稿案の生成をリクエストします。1〜2分ほどかかります。よろしいですか？\`
     : '新しい投稿案の生成をリクエストします（テーマはおまかせ）。1〜2分ほどかかります。よろしいですか？';
   if (!confirm(confirmMessage)) return;
   const res = await fetch('/api/drafts/generate', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({ themeSubject }) });
@@ -312,6 +358,7 @@ function renderDraft(draft) {
   return \`
   <div class="card">
     <div class="subject">\${escapeHtml(draft.subject)}</div>
+    \${draft.requiresManualPhoto ? '<p style="color:#a33;font-weight:700;">⚠️ 症例記事です。表紙は仮の写真です。承認前に、GitHub上でこの下書きの1枚目の画像ファイルを実際の同意済み症例写真に差し替えてください。</p>' : ''}
     \${slidesHtml}
     <div class="actions" style="margin:12px 0;">
       <button \${canAdd ? '' : 'disabled'} onclick="addPage('\${draft.draftId}')">＋ページを追加</button>

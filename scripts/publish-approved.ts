@@ -4,7 +4,7 @@ import { getIssueBody, extractDraftIdFromIssueBody, isApprovalComment, commentOn
 import { publishCarouselPost, buildRawGithubUrl } from "../src/publish/instagramGraph";
 import { appendPostHistory } from "../src/state/history";
 
-type Manifest = { draftId: string; subject: string; caption: string; hashtags: string[]; slides: Array<{ order: number; fileName: string }> };
+type Manifest = { draftId: string; articleId?: string; subject: string; caption: string; hashtags: string[]; slides: Array<{ order: number; fileName: string }> };
 
 async function main() {
   // Read from env vars, not argv/shell interpolation: github.event.comment.body is
@@ -33,7 +33,7 @@ async function main() {
 
   try {
     const result = await publishCarouselPost({ imageUrls, caption });
-    await appendPostHistory({ subject: manifest.subject, publishedAt: new Date().toISOString() });
+    await appendPostHistory({ subject: manifest.subject, articleId: manifest.articleId, publishedAt: new Date().toISOString() });
     await commentOnIssue(issueNumber, `Instagramへ公開しました。media_id: ${result.mediaId}`);
     await closeIssue(issueNumber);
     console.log(`公開しました: media_id=${result.mediaId}`);

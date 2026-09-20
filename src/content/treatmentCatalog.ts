@@ -54,6 +54,8 @@ export const TREATMENT_CATALOG: TreatmentCatalogEntry[] = [
   { slug: "applaura-dgel", url: "https://ishidahihuka.jp/service/applaura-dgel/", title: "塗るニオイケア「アプローラD GEL」", categories: ["その他"] },
   { slug: "applaura", url: "https://ishidahihuka.jp/service/applaura/", title: "飲むニオイケア「アプローラ」", categories: ["その他"] },
   { slug: "miracle-injection", url: "https://ishidahihuka.jp/service/miracle-injection/", title: "首の横シワにミラクルL注射", categories: ["その他"] },
+  { slug: "pore-overview", url: "https://ishidahihuka.jp/pore/", title: "毛穴治療（分類ページ）", categories: ["毛穴"] },
+  { slug: "acne-overview", url: "https://ishidahihuka.jp/acne-treatment/", title: "ニキビとニキビ跡（分類ページ）", categories: ["ニキビ", "ニキビ跡"] },
 ];
 
 export function getTreatmentBySlug(slug: string): TreatmentCatalogEntry {

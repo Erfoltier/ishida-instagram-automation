@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       theme_subject:
-        description: "テーマを指定する場合はsrc/content/themes.tsのsubjectと完全一致させる（空欄なら自動選定）"
+        description: "記事ID（例: M1-01）またはsubjectと完全一致させる。空欄なら次の未公開記事を順番に自動選定"
         required: false
         type: string
 
@@ -23,8 +23,15 @@ jobs:
         with:
           node-version: "20"
       - run: npm ci
-      # ubuntu-latest ships no CJK fonts — without this, SVG text renders as tofu/garbled.
-      - run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+      # ubuntu-latest ships no CJK fonts. All on-image text is Noto Serif JP (Mincho)
+      # per the brand redesign — apt's fonts-noto-cjk package is Sans-only, so fetch
+      # the actual Serif OTF directly rather than risk silent tofu/mojibake.
+      - run: |
+          sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+          sudo mkdir -p /usr/share/fonts/opentype/noto-serif-cjk
+          sudo curl -fsSL -o /usr/share/fonts/opentype/noto-serif-cjk/NotoSerifCJKjp-Regular.otf https://github.com/googlefonts/noto-cjk/raw/main/Serif/OTF/Japanese/NotoSerifCJKjp-Regular.otf
+          sudo curl -fsSL -o /usr/share/fonts/opentype/noto-serif-cjk/NotoSerifCJKjp-Bold.otf https://github.com/googlefonts/noto-cjk/raw/main/Serif/OTF/Japanese/NotoSerifCJKjp-Bold.otf
+          fc-cache -f
       - id: generate
         run: npm run generate
         env:

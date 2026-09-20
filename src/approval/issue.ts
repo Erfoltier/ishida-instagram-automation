@@ -31,6 +31,7 @@ export type DraftIssueInput = {
   imageUrls: string[];
   slideTexts: Array<{ order: number; title: string; body: string }>;
   complianceNotes: string;
+  requiresManualPhoto?: boolean;
 };
 
 const APPROVAL_LABEL = "instagram-draft";
@@ -38,10 +39,13 @@ const APPROVAL_LABEL = "instagram-draft";
 export async function createDraftApprovalIssue(input: DraftIssueInput): Promise<{ issueNumber: number; url: string }> {
   const imagesMarkdown = input.imageUrls.map((url, index) => `**${index + 1}枚目**\n\n![slide-${index + 1}](${url})`).join("\n\n");
   const slidesMarkdown = input.slideTexts.map(slide => `- **${slide.order}枚目**: ${slide.title} — ${slide.body}`).join("\n");
+  const manualPhotoWarning = input.requiresManualPhoto
+    ? `\n> ⚠️ **症例記事です。表紙は仮の写真です。** 実際の同意済み症例写真を \`drafts/${input.draftId}/slide-01.jpg\` に差し替えてから承認してください（GitHubのファイルアップロード画面から、同じファイル名で上書きアップロードできます）。写真の差し替え忘れのまま承認すると、仮写真のまま公開されます。\n`
+    : "";
   const body = `## 投稿案: ${input.subject}
 
 <!-- draft-id: ${input.draftId} -->
-
+${manualPhotoWarning}
 ### キャプション
 
 ${input.caption}

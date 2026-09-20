@@ -9,6 +9,7 @@ type Manifest = {
   caption: string;
   hashtags: string[];
   complianceNotes: string;
+  requiresManualPhoto?: boolean;
   slides: Array<{ order: number; kind: string; title: string; body: string; fileName: string }>;
 };
 
@@ -36,6 +37,7 @@ async function main() {
     imageUrls,
     slideTexts: manifest.slides.map(({ order, title, body }) => ({ order, title, body })),
     complianceNotes: manifest.complianceNotes,
+    requiresManualPhoto: manifest.requiresManualPhoto ?? false,
   });
 
   console.log(`承認Issueを作成しました: #${issueNumber} ${url}`);

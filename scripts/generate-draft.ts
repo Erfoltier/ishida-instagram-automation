@@ -31,16 +31,18 @@ async function main() {
   const slides = await createCarouselSlideCopy(draft, plan, sourceText);
 
   const draftId = `${new Date().toISOString().slice(0, 10)}-${Math.random().toString(36).slice(2, 8)}`;
-  const rendered = await renderCarouselSlides(draftId, draft, slides);
+  const rendered = await renderCarouselSlides(draftId, draft, slides, theme.requiresManualPhoto);
 
   const manifest = {
     draftId,
+    articleId: theme.articleId,
     subject: theme.subject,
     eyebrow: draft.eyebrow,
     caption: draft.caption,
     hashtags: draft.hashtags,
     complianceNotes: draft.complianceNotes,
     sourceUrls,
+    requiresManualPhoto: theme.requiresManualPhoto,
     slides: rendered.map(slide => ({ order: slide.order, kind: slide.kind, title: slide.title, body: slide.body, fileName: slide.fileName })),
   };
 
