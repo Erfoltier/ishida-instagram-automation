@@ -103,11 +103,17 @@ ${sourceText}
 primarySubjectには単一の悩み・治療・告知だけを12文字以内で記載してください。既存の投稿基準は、上品・清潔・静かな高級感です。${coverInstruction(theme)}imageSearchQueryは、表紙のAI画像生成に渡す被写体の説明を英語で作ってください。${imageSubjectInstruction(theme)}${extraInstruction ?? ""}`,
   });
 
-  const missingFields = (["primarySubject", "topic", "treatmentTheme", "headline", "subheadline", "caption", "hashtags", "imageSearchQuery", "complianceNotes"] as const)
+  // complianceNotes is excluded here: it's an internal review memo (shown to staff
+  // in the approval Issue only, never published), and Anthropic's tool use doesn't
+  // strictly enforce "required" fields — the model has been observed to omit just
+  // this one occasionally. Not worth failing the whole generation over; see the
+  // fallback default below instead.
+  const missingFields = (["primarySubject", "topic", "treatmentTheme", "headline", "subheadline", "caption", "hashtags", "imageSearchQuery"] as const)
     .filter(field => draft[field] === undefined);
   if (missingFields.length > 0) {
     throw new Error(`Claude応答に必須項目が欠けています（トークン上限で打ち切られた可能性があります）: ${missingFields.join(", ")}`);
   }
+  if (draft.complianceNotes === undefined) draft.complianceNotes = "（生成時にコンプライアンスメモが取得できませんでした。内容を確認してください。）";
 
   // Force-empty rather than trust prompt compliance alone: narrative covers must
   // never reveal the answer (strategy doc ch.13), so discard whatever the model
