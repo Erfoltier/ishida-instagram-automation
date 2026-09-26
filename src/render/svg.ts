@@ -54,24 +54,41 @@ function splitCarouselText(value: string, maxLineLength = 15) {
  * from Gothic (Noto Sans) to Mincho (Noto Serif) for all on-image text.
  */
 const INK = "#3C3033";
-const ACCENT = "#925D66";
 const SUB_ACCENT = "#C98F96";
 const GOLD = "#A58B62";
 const IVORY = "#FFFAFA";
 const IVORY_PANEL = "#FBF4F3";
 const FONT = "'Noto Serif CJK JP', 'Noto Serif JP', serif";
 
-const CLINIC_STYLE = `
+/**
+ * The one "colored text" element (eyebrow label, price figure, accent rules)
+ * rotates through this palette per post — picked deterministically from the
+ * draftId so every page WITHIN one carousel matches, but different posts land
+ * on different colors. All muted/desaturated so any of them reads as premium
+ * against the ivory background, per the reference post
+ * (instagram.com/p/Ddb5wNKksMS/).
+ */
+export const ACCENT_PALETTE = ["#925D66", "#3D6270", "#6B7B5E", "#8A7048", "#7A5D74", "#5D6B82"] as const;
+
+export function pickAccentColor(seed: string): string {
+  let hash = 0;
+  for (const char of seed) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return ACCENT_PALETTE[hash % ACCENT_PALETTE.length]!;
+}
+
+function clinicStyle(accentColor: string) {
+  return `
 <style>
-  .eyebrow { font-family: ${FONT}; font-size: 24px; font-weight: 700; letter-spacing: 7px; fill: ${ACCENT}; }
+  .eyebrow { font-family: ${FONT}; font-size: 24px; font-weight: 700; letter-spacing: 7px; fill: ${accentColor}; }
   .headline { font-family: ${FONT}; font-size: 54px; font-weight: 700; letter-spacing: -1px; fill: ${INK}; }
-  .sub { font-family: ${FONT}; font-size: 25px; font-weight: 400; fill: ${ACCENT}; }
+  .sub { font-family: ${FONT}; font-size: 25px; font-weight: 400; fill: ${accentColor}; }
   .clinic { font-family: ${FONT}; font-size: 24px; font-weight: 700; fill: ${INK}; }
-  .station { font-family: ${FONT}; font-size: 18px; font-weight: 400; fill: ${ACCENT}; }
-  .priceLabel { font-family: ${FONT}; font-size: 22px; font-weight: 400; fill: ${ACCENT}; }
-  .priceValue { font-family: ${FONT}; font-size: 64px; font-weight: 700; fill: ${INK}; }
-  .priceNote { font-family: ${FONT}; font-size: 20px; font-weight: 400; fill: ${ACCENT}; }
+  .station { font-family: ${FONT}; font-size: 18px; font-weight: 400; fill: ${accentColor}; }
+  .priceLabel { font-family: ${FONT}; font-size: 22px; font-weight: 400; fill: ${accentColor}; }
+  .priceValue { font-family: ${FONT}; font-size: 64px; font-weight: 700; fill: ${accentColor}; }
+  .priceNote { font-family: ${FONT}; font-size: 20px; font-weight: 400; fill: ${accentColor}; }
 </style>`;
+}
 
 export type CoverPriceInfo = {
   /** e.g. "医療脱毛（ヒゲ）" */
@@ -97,7 +114,7 @@ export type CoverPriceInfo = {
  * - Price (`priceInfo` provided): shows treatment/area/unit/price directly,
  *   since price-menu posts should never hide the number behind a question hook.
  */
-export function buildLayoutSvg(draft: Pick<GeneratedDraft, "eyebrow"> & { headline: string; subheadline: string; priceInfo?: CoverPriceInfo }) {
+export function buildLayoutSvg(draft: Pick<GeneratedDraft, "eyebrow"> & { headline: string; subheadline: string; priceInfo?: CoverPriceInfo }, accentColor: string = ACCENT_PALETTE[0]) {
   const [line1, line2] = splitHeadline(draft.headline);
   const line2Svg = line2 ? `<text x="112" y="405" class="headline">${escapeXml(line2)}</text>` : "";
   const subheadlineBlock = draft.priceInfo
@@ -123,10 +140,10 @@ export function buildLayoutSvg(draft: Pick<GeneratedDraft, "eyebrow"> & { headli
         <stop offset="100%" stop-color="${IVORY}" stop-opacity="0"/>
       </linearGradient>
     </defs>
-    ${CLINIC_STYLE}
+    ${clinicStyle(accentColor)}
     <rect x="0" y="0" width="1080" height="1080" fill="url(#veil)"/>
     <rect x="72" y="100" width="7" height="880" fill="${GOLD}"/>
-    <rect x="78" y="100" width="546" height="6" fill="${ACCENT}"/>
+    <rect x="78" y="100" width="546" height="6" fill="${accentColor}"/>
     <text x="116" y="164" class="eyebrow">${escapeXml(draft.eyebrow.toUpperCase())}</text>
     <text x="112" y="315" class="headline">${escapeXml(line1 ?? "")}</text>
     ${line2Svg}
@@ -159,7 +176,7 @@ function getSlideIcon(kind: GeneratedCarouselSlide["kind"]): string {
  * a large low-opacity arc varies per slide so the carousel doesn't read as one
  * repeated background seven times.
  */
-export function buildCarouselInformationSvg(slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number) {
+export function buildCarouselInformationSvg(slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number, accentColor: string = ACCENT_PALETTE[0]) {
   const titleLines = splitCarouselText(slide.title, 14);
   const bodyLines = splitCarouselText(slide.body, 24);
   const isCta = slide.kind === "cta";
@@ -178,7 +195,7 @@ export function buildCarouselInformationSvg(slide: GeneratedCarouselSlide, eyebr
   return `
   <svg width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
     <style>
-      .eyebrow { font-family: ${FONT}; font-size: 19px; font-weight: 700; letter-spacing: 4px; fill: ${ACCENT}; }
+      .eyebrow { font-family: ${FONT}; font-size: 19px; font-weight: 700; letter-spacing: 4px; fill: ${accentColor}; }
       .headline { font-family: ${FONT}; font-size: 48px; font-weight: 700; letter-spacing: -1px; fill: ${INK}; }
       .body { font-family: ${FONT}; font-size: 27px; font-weight: 400; fill: ${INK}; }
       .bodyOnDark { font-family: ${FONT}; font-size: 27px; font-weight: 400; fill: ${IVORY}; }
@@ -186,21 +203,21 @@ export function buildCarouselInformationSvg(slide: GeneratedCarouselSlide, eyebr
       .pageTotal { font-family: ${FONT}; font-size: 20px; font-weight: 400; fill: ${GOLD}; opacity: 0.55; }
       .reservation { font-family: ${FONT}; font-size: 22px; font-weight: 700; fill: ${IVORY}; }
       .clinic { font-family: ${FONT}; font-size: 24px; font-weight: 700; fill: ${INK}; }
-      .station { font-family: ${FONT}; font-size: 18px; font-weight: 400; fill: ${ACCENT}; }
+      .station { font-family: ${FONT}; font-size: 18px; font-weight: 400; fill: ${accentColor}; }
     </style>
     <rect x="0" y="0" width="1080" height="1080" fill="${IVORY}"/>
     <g transform="${arcTransform}" opacity="0.14">
       <circle cx="0" cy="0" r="360" fill="none" stroke="${GOLD}" stroke-width="2"/>
     </g>
     <rect x="72" y="100" width="7" height="880" fill="${GOLD}"/>
-    <rect x="78" y="100" width="546" height="6" fill="${ACCENT}"/>
+    <rect x="78" y="100" width="546" height="6" fill="${accentColor}"/>
     <text x="116" y="164" class="eyebrow">${escapeXml(eyebrow.toUpperCase())}</text>
     <text x="964" y="171" text-anchor="end" class="pageNumber">${String(slide.order).padStart(2, "0")}<tspan class="pageTotal"> / ${String(totalSlides).padStart(2, "0")}</tspan></text>
-    <circle cx="940" cy="230" r="46" fill="${ACCENT}"/>
+    <circle cx="940" cy="230" r="46" fill="${accentColor}"/>
     <g transform="translate(940,230)">${getSlideIcon(slide.kind)}</g>
     ${titleSvg}
     <rect x="114" y="452" width="365" height="3" fill="${GOLD}"/>
-    <rect x="114" y="${boxY}" width="852" height="${boxHeight}" rx="16" fill="${isCta ? ACCENT : IVORY_PANEL}" stroke="${isCta ? ACCENT : SUB_ACCENT}" stroke-width="1.5"/>
+    <rect x="114" y="${boxY}" width="852" height="${boxHeight}" rx="16" fill="${isCta ? accentColor : IVORY_PANEL}" stroke="${isCta ? accentColor : SUB_ACCENT}" stroke-width="1.5"/>
     ${bodySvg}
     ${reservation}
     <text x="114" y="919" class="clinic">いしだ皮フ科・美容皮膚科</text>
@@ -216,7 +233,7 @@ export function buildCarouselInformationSvg(slide: GeneratedCarouselSlide, eyebr
  * for the theme's category; buildCarouselInformationSvg is the flat-design
  * fallback for categories with no photos uploaded yet.
  */
-export function buildPhotoOverlaySvg(slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number, needsStrongScrim: boolean) {
+export function buildPhotoOverlaySvg(slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number, needsStrongScrim: boolean, accentColor: string = ACCENT_PALETTE[0]) {
   const titleLines = splitCarouselText(slide.title, 14);
   const bodyLines = splitCarouselText(slide.body, 24);
   const isCta = slide.kind === "cta";
@@ -262,7 +279,7 @@ export function buildPhotoOverlaySvg(slide: GeneratedCarouselSlide, eyebrow: str
     <rect x="898" y="90" width="112" height="46" rx="23" fill="${INK}" fill-opacity="0.32" stroke="#FFFFFF" stroke-width="1.5" opacity="0.9"/>
     <text x="954" y="120" text-anchor="middle" class="pill">${String(slide.order).padStart(2, "0")}/${String(totalSlides).padStart(2, "0")}</text>
     ${titleSvg}
-    <rect x="118" y="${460 + (titleLines.length - 1) * 68 + 32}" width="140" height="5" fill="${GOLD}"/>
+    <rect x="118" y="${460 + (titleLines.length - 1) * 68 + 32}" width="140" height="5" fill="${accentColor}"/>
     ${bodySvg}
     ${reservation}
     <text x="116" y="919" class="clinic">いしだ皮フ科・美容皮膚科</text>

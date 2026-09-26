@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import type { GeneratedDraft, GeneratedCarouselSlide } from "../content/draftGeneration";
-import { buildLayoutSvg, buildCarouselInformationSvg, buildPhotoOverlaySvg } from "./svg";
+import { buildLayoutSvg, buildCarouselInformationSvg, buildPhotoOverlaySvg, pickAccentColor } from "./svg";
 import { coverPhotoProvider } from "./coverImage";
 import { pickTexturePhoto } from "./texturePhotoLibrary";
 
@@ -26,14 +26,21 @@ function isNearColor(actual: readonly number[], expected: readonly number[], tol
   return actual.every((channel, index) => Math.abs(channel - (expected[index] ?? 0)) <= tolerance);
 }
 
-// Brand palette (2026-09-20 revision): gold #A58B62, wine-red accent #925D66, ivory #FFFAFA.
-async function validateBrandTemplate(image: Buffer) {
+function hexToRgb(hex: string): [number, number, number] {
+  const value = hex.replace("#", "");
+  return [parseInt(value.slice(0, 2), 16), parseInt(value.slice(2, 4), 16), parseInt(value.slice(4, 6), 16)];
+}
+
+// Brand palette (2026-09-20 revision): gold #A58B62 fixed, ivory #FFFAFA fixed,
+// accent rotates per post (see svg.ts's pickAccentColor) — pass the resolved
+// color in so the check matches whichever one this draft actually used.
+async function validateBrandTemplate(image: Buffer, accentColor: string) {
   const { data, info } = await sharp(image).raw().toBuffer({ resolveWithObject: true });
   if (info.width !== 1080 || info.height !== 1080 || info.channels !== 3) {
     throw new Error("画像のサイズまたはカラーチャンネルが基準外です。");
   }
   const hasGoldRule = isNearColor(pixelAt(data, 75, 500), [165, 139, 98], 16);
-  const hasAccentRule = isNearColor(pixelAt(data, 100, 102), [146, 93, 102], 16);
+  const hasAccentRule = isNearColor(pixelAt(data, 100, 102), hexToRgb(accentColor), 16);
   const hasIvoryPanel = isNearColor(pixelAt(data, 240, 760), [255, 250, 250], 16);
   if (!hasGoldRule || !hasAccentRule || !hasIvoryPanel) {
     throw new Error("固定デザインの品質基準（ゴールドライン・アクセントライン・アイボリーパネル）を満たしていません。");
@@ -41,13 +48,13 @@ async function validateBrandTemplate(image: Buffer) {
 }
 
 /** Composites a (possibly cached) photo with the headline/subheadline overlay. No network call. */
-async function compositeCoverSlide(photo: Buffer, eyebrow: string, title: string, body: string): Promise<Buffer> {
+async function compositeCoverSlide(photo: Buffer, eyebrow: string, title: string, body: string, accentColor: string): Promise<Buffer> {
   const composited = await sharp(photo)
     .resize(1080, 1080, { fit: "cover", position: "right" })
-    .composite([{ input: Buffer.from(buildLayoutSvg({ eyebrow, headline: title, subheadline: body })), top: 0, left: 0 }])
+    .composite([{ input: Buffer.from(buildLayoutSvg({ eyebrow, headline: title, subheadline: body }, accentColor)), top: 0, left: 0 }])
     .jpeg({ quality: 92, chromaSubsampling: "4:4:4" })
     .toBuffer();
-  await validateBrandTemplate(composited);
+  await validateBrandTemplate(composited, accentColor);
   return composited;
 }
 
@@ -67,13 +74,13 @@ async function isTextZoneBright(croppedPhoto: Buffer): Promise<boolean> {
 }
 
 /** Composites the same texture photo (different crop per page) with the gradient+text overlay. No brand-color validation — the background is a photo, not the flat template. */
-async function renderPhotoInformationSlide(photoPath: string, slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number): Promise<Buffer> {
+async function renderPhotoInformationSlide(photoPath: string, slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number, accentColor: string): Promise<Buffer> {
   const photo = await readFile(photoPath);
   const gravity = CROP_GRAVITIES[slide.order % CROP_GRAVITIES.length];
   const croppedPhoto = await sharp(photo).resize(1080, 1080, { fit: "cover", position: gravity }).jpeg().toBuffer();
   const needsStrongScrim = await isTextZoneBright(croppedPhoto);
   const rendered = await sharp(croppedPhoto)
-    .composite([{ input: Buffer.from(buildPhotoOverlaySvg(slide, eyebrow, totalSlides, needsStrongScrim)), top: 0, left: 0 }])
+    .composite([{ input: Buffer.from(buildPhotoOverlaySvg(slide, eyebrow, totalSlides, needsStrongScrim, accentColor)), top: 0, left: 0 }])
     .jpeg({ quality: 90, chromaSubsampling: "4:4:4" })
     .toBuffer();
   const { info } = await sharp(rendered).raw().toBuffer({ resolveWithObject: true });
@@ -82,19 +89,19 @@ async function renderPhotoInformationSlide(photoPath: string, slide: GeneratedCa
 }
 
 /** Flat-design fallback (no photo available for this theme's category yet) — icon badge + boxed text. */
-async function renderFlatInformationSlide(slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number): Promise<Buffer> {
-  const rendered = await sharp(Buffer.from(buildCarouselInformationSvg(slide, eyebrow, totalSlides)))
+async function renderFlatInformationSlide(slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number, accentColor: string): Promise<Buffer> {
+  const rendered = await sharp(Buffer.from(buildCarouselInformationSvg(slide, eyebrow, totalSlides, accentColor)))
     .jpeg({ quality: 92, chromaSubsampling: "4:4:4" })
     .toBuffer();
-  await validateBrandTemplate(rendered);
+  await validateBrandTemplate(rendered, accentColor);
   return rendered;
 }
 
-async function renderInformationSlide(draftId: string, slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number): Promise<Buffer> {
+async function renderInformationSlide(draftId: string, slide: GeneratedCarouselSlide, eyebrow: string, totalSlides: number, accentColor: string): Promise<Buffer> {
   const photoPath = await pickTexturePhoto(eyebrow, draftId);
   return photoPath
-    ? renderPhotoInformationSlide(photoPath, slide, eyebrow, totalSlides)
-    : renderFlatInformationSlide(slide, eyebrow, totalSlides);
+    ? renderPhotoInformationSlide(photoPath, slide, eyebrow, totalSlides, accentColor)
+    : renderFlatInformationSlide(slide, eyebrow, totalSlides, accentColor);
 }
 
 function draftDirFor(draftId: string) {
@@ -121,6 +128,7 @@ export async function renderCarouselSlides(
 ): Promise<RenderedSlide[]> {
   const draftDir = draftDirFor(draftId);
   await mkdir(draftDir, { recursive: true });
+  const accentColor = pickAccentColor(draftId);
 
   // Fetch the AI cover photo once and keep the untouched source around, so a later
   // text-only edit (see regenerateSlide below) can recomposite without another
@@ -133,9 +141,9 @@ export async function renderCarouselSlides(
     if (slide.kind === "cover") {
       coverPhoto ??= requiresManualPhoto ? await createPlaceholderPhoto() : await coverPhotoProvider.getCoverPhoto(draft.imageSearchQuery);
       await writeFile(path.join(draftDir, COVER_SOURCE_FILE_NAME), coverPhoto);
-      buffer = await compositeCoverSlide(coverPhoto, draft.eyebrow, slide.title, slide.body);
+      buffer = await compositeCoverSlide(coverPhoto, draft.eyebrow, slide.title, slide.body, accentColor);
     } else {
-      buffer = await renderInformationSlide(draftId, slide, draft.eyebrow, slides.length);
+      buffer = await renderInformationSlide(draftId, slide, draft.eyebrow, slides.length, accentColor);
     }
     const fileName = `slide-${String(slide.order).padStart(2, "0")}.jpg`;
     const filePath = path.join(draftDir, fileName);
@@ -157,9 +165,10 @@ export async function regenerateSlide(
   totalSlides: number
 ): Promise<void> {
   const draftDir = draftDirFor(draftId);
+  const accentColor = pickAccentColor(draftId);
   const buffer = slide.kind === "cover"
-    ? await compositeCoverSlide(await readFile(path.join(draftDir, COVER_SOURCE_FILE_NAME)), eyebrow, slide.title, slide.body)
-    : await renderInformationSlide(draftId, slide as GeneratedCarouselSlide, eyebrow, totalSlides);
+    ? await compositeCoverSlide(await readFile(path.join(draftDir, COVER_SOURCE_FILE_NAME)), eyebrow, slide.title, slide.body, accentColor)
+    : await renderInformationSlide(draftId, slide as GeneratedCarouselSlide, eyebrow, totalSlides, accentColor);
   const fileName = `slide-${String(slide.order).padStart(2, "0")}.jpg`;
   await writeFile(path.join(draftDir, fileName), buffer);
 }
