@@ -5,18 +5,6 @@ function escapeXml(value: string) {
   return value.replace(/[<>&'"]/g, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[char] ?? char);
 }
 
-function splitHeadline(headline: string) {
-  const normalized = headline.replace(/\s+/g, "").trim();
-  const maxLineLength = 11;
-  if (normalized.length <= maxLineLength) return [normalized];
-  const punctuationIndex = normalized.slice(0, maxLineLength + 1).lastIndexOf("、");
-  if (punctuationIndex >= 5) return [normalized.slice(0, punctuationIndex + 1), normalized.slice(punctuationIndex + 1)];
-  const particleIndexes = Array.from(normalized.matchAll(/[をはがにでとへ]/g), match => match.index ?? -1).filter(index => index >= 5 && index < maxLineLength);
-  const particleIndex = particleIndexes.at(-1);
-  const splitAt = particleIndex === undefined ? maxLineLength : particleIndex + 1;
-  return [normalized.slice(0, splitAt), normalized.slice(splitAt)];
-}
-
 const ASCII_ALNUM = /[A-Za-z0-9]/;
 
 /** Nudges a line-break index so it never lands inside a Latin word/acronym (e.g. "LINE", "HIFU"). */
@@ -29,6 +17,40 @@ function avoidWordBreak(text: string, cut: number): number {
   let end = cut;
   while (end < text.length && ASCII_ALNUM.test(text[end]!)) end += 1;
   return end; // word starts too close to the line start — keep it on this line instead
+}
+
+/**
+ * Greedy word-wrap for the big (80px) cover headline. maxLineLength=8 keeps
+ * each line within the ivory panel at that size (panel is ~600px wide, and a
+ * bold CJK glyph at 80px is roughly 80px wide). Capped at 3 lines — anything
+ * left over after that goes on the final line as-is rather than growing the
+ * card indefinitely.
+ */
+function splitHeadline(headline: string): string[] {
+  const normalized = headline.replace(/\s+/g, "").trim();
+  const maxLineLength = 8;
+  const maxLines = 3;
+  const lines: string[] = [];
+  let remaining = normalized;
+  while (remaining.length > maxLineLength && lines.length < maxLines - 1) {
+    const candidate = remaining.slice(0, maxLineLength + 1);
+    const punctuationIndex = candidate.lastIndexOf("、");
+    let cut: number;
+    if (punctuationIndex >= 4) {
+      cut = punctuationIndex + 1;
+    } else {
+      const particleIndexes = Array.from(candidate.matchAll(/[をはがにでとへ]/g), match => match.index ?? -1).filter(
+        index => index >= 4 && index < maxLineLength
+      );
+      const particleIndex = particleIndexes.at(-1);
+      cut = particleIndex === undefined ? maxLineLength : particleIndex + 1;
+    }
+    cut = avoidWordBreak(remaining, cut);
+    lines.push(remaining.slice(0, cut));
+    remaining = remaining.slice(cut);
+  }
+  if (remaining) lines.push(remaining);
+  return lines;
 }
 
 function splitCarouselText(value: string, maxLineLength = 15) {
@@ -48,17 +70,25 @@ function splitCarouselText(value: string, maxLineLength = 15) {
 }
 
 /**
- * Brand palette (2026-09-20 revision, per the strategy doc's chapter 9):
- * ivory background, wine-red accent (was blue-gray/teal), warm gold rule line,
- * near-black body text, dusty-rose sub-accent for borders/tints. Font switched
- * from Gothic (Noto Sans) to Mincho (Noto Serif) for all on-image text.
+ * Brand palette (2026-09-26 revision): unified with the clinic's actual
+ * published post (instagram.com/p/Ddb5wNKksMS/) — bold Gothic (Noto Sans), not
+ * Mincho serif; ivory background; accent color for the eyebrow/rule/price;
+ * near-black headline; muted warm-gray fine print/footer, matching that post's
+ * eyebrow-rule / bold headline / big colored price / gray fine-print / footer
+ * structure exactly instead of the earlier serif template.
  */
 const INK = "#3C3033";
 const SUB_ACCENT = "#C98F96";
 const GOLD = "#A58B62";
 const IVORY = "#FFFAFA";
 const IVORY_PANEL = "#FBF4F3";
-const FONT = "'Noto Serif CJK JP', 'Noto Serif JP', serif";
+const MUTED = "#8A8078";
+const FONT = "'Noto Sans CJK JP', 'Noto Sans JP', sans-serif";
+
+/** Crude Latin-glyph width estimate (uppercase, bold) for sizing the eyebrow's trailing rule line. */
+function estimateLatinLabelWidth(text: string, fontSize: number, letterSpacing: number): number {
+  return text.length * (fontSize * 0.62 + letterSpacing);
+}
 
 /**
  * The one "colored text" element (eyebrow label, price figure, accent rules)
@@ -79,14 +109,17 @@ export function pickAccentColor(seed: string): string {
 function clinicStyle(accentColor: string) {
   return `
 <style>
-  .eyebrow { font-family: ${FONT}; font-size: 24px; font-weight: 700; letter-spacing: 7px; fill: ${accentColor}; }
-  .headline { font-family: ${FONT}; font-size: 54px; font-weight: 700; letter-spacing: -1px; fill: ${INK}; }
-  .sub { font-family: ${FONT}; font-size: 25px; font-weight: 400; fill: ${accentColor}; }
-  .clinic { font-family: ${FONT}; font-size: 24px; font-weight: 700; fill: ${INK}; }
-  .station { font-family: ${FONT}; font-size: 18px; font-weight: 400; fill: ${accentColor}; }
-  .priceLabel { font-family: ${FONT}; font-size: 22px; font-weight: 400; fill: ${accentColor}; }
-  .priceValue { font-family: ${FONT}; font-size: 64px; font-weight: 700; fill: ${accentColor}; }
-  .priceNote { font-family: ${FONT}; font-size: 20px; font-weight: 400; fill: ${accentColor}; }
+  .eyebrow { font-family: ${FONT}; font-size: 23px; font-weight: 700; letter-spacing: 6px; fill: ${accentColor}; }
+  .headline { font-family: ${FONT}; font-size: 80px; font-weight: 700; letter-spacing: -2px; fill: ${INK}; }
+  .sub { font-family: ${FONT}; font-size: 30px; font-weight: 400; fill: ${accentColor}; }
+  .clinic { font-family: ${FONT}; font-size: 26px; font-weight: 700; fill: ${INK}; }
+  .footerDivider { font-family: ${FONT}; font-size: 24px; font-weight: 400; fill: ${MUTED}; }
+  .station { font-family: ${FONT}; font-size: 20px; font-weight: 400; fill: ${MUTED}; }
+  .pageIndicator { font-family: ${FONT}; font-size: 20px; font-weight: 400; fill: ${MUTED}; }
+  .priceValue { font-family: ${FONT}; font-size: 92px; font-weight: 700; fill: ${accentColor}; }
+  .priceSuffix { font-family: ${FONT}; font-size: 34px; font-weight: 700; fill: ${accentColor}; }
+  .treatmentName { font-family: ${FONT}; font-size: 36px; font-weight: 700; fill: ${accentColor}; }
+  .fineprint { font-family: ${FONT}; font-size: 24px; font-weight: 400; fill: ${MUTED}; }
 </style>`;
 }
 
@@ -114,20 +147,50 @@ export type CoverPriceInfo = {
  * - Price (`priceInfo` provided): shows treatment/area/unit/price directly,
  *   since price-menu posts should never hide the number behind a question hook.
  */
-export function buildLayoutSvg(draft: Pick<GeneratedDraft, "eyebrow"> & { headline: string; subheadline: string; priceInfo?: CoverPriceInfo }, accentColor: string = ACCENT_PALETTE[0]) {
-  const [line1, line2] = splitHeadline(draft.headline);
-  const line2Svg = line2 ? `<text x="112" y="405" class="headline">${escapeXml(line2)}</text>` : "";
-  const subheadlineBlock = draft.priceInfo
-    ? `
-    <rect x="114" y="482" width="365" height="3" fill="${GOLD}"/>
-    <text x="114" y="545" class="priceLabel">${escapeXml(draft.priceInfo.targetArea)}／${escapeXml(draft.priceInfo.unit)}</text>
-    <text x="114" y="625" class="priceValue">${escapeXml(draft.priceInfo.price)}</text>
-    ${draft.priceInfo.hasAdditionalFees ? `<text x="114" y="665" class="priceNote">別途費用あり → 詳しくは次のページへ</text>` : ""}`
-    : draft.subheadline.trim()
-      ? `
-    <rect x="114" y="482" width="365" height="3" fill="${GOLD}"/>
-    <text x="114" y="545" class="sub">${escapeXml(draft.subheadline)}</text>`
-      : ""; // narrative cover with no answer to give away — leave as whitespace, per strategy doc ch.13
+export function buildLayoutSvg(
+  draft: Pick<GeneratedDraft, "eyebrow"> & { headline: string; subheadline: string; priceInfo?: CoverPriceInfo },
+  accentColor: string = ACCENT_PALETTE[0],
+  pageInfo?: { order: number; total: number }
+) {
+  const LEFT_X = 64;
+  const headlineLines = splitHeadline(draft.headline);
+  const headlineBaseY = 280;
+  const headlineLineHeight = 92;
+  const headlineSvg = headlineLines
+    .map((line, index) => `<text x="${LEFT_X}" y="${headlineBaseY + index * headlineLineHeight}" class="headline">${escapeXml(line)}</text>`)
+    .join("");
+  const ruleY = headlineBaseY + (headlineLines.length - 1) * headlineLineHeight + 50;
+
+  const eyebrowText = draft.eyebrow.toUpperCase();
+  const eyebrowLineStartX = LEFT_X + estimateLatinLabelWidth(eyebrowText, 23, 6) + 28;
+
+  let contentBlock: string;
+  if (draft.priceInfo) {
+    // Price cover, matching the reference post's structure: huge price figure (with
+    // a smaller trailing unit/tax suffix on the same baseline), treatment name below
+    // it in the accent color, then two small gray fine-print lines — no separate
+    // "targetArea/unit" label line above the price like the old template had.
+    const priceMatch = draft.priceInfo.price.match(/^([\d,]+)(.*)$/);
+    const priceMain = priceMatch ? priceMatch[1]! : draft.priceInfo.price;
+    const priceSuffix = priceMatch ? priceMatch[2]! : "";
+    const priceY = ruleY + 130;
+    const treatmentY = priceY + 70;
+    const fineprint1Y = treatmentY + 56;
+    const fineprint2Y = fineprint1Y + 40;
+    contentBlock = `
+    <text x="${LEFT_X}" y="${priceY}" class="priceValue">${escapeXml(priceMain)}<tspan class="priceSuffix">${escapeXml(priceSuffix)}</tspan></text>
+    <text x="${LEFT_X}" y="${treatmentY}" class="treatmentName">${escapeXml(draft.priceInfo.treatmentName)}</text>
+    <text x="${LEFT_X}" y="${fineprint1Y}" class="fineprint">${escapeXml(draft.priceInfo.targetArea)}／${escapeXml(draft.priceInfo.unit)}</text>
+    ${draft.priceInfo.hasAdditionalFees ? `<text x="${LEFT_X}" y="${fineprint2Y}" class="fineprint">別途費用あり（詳しくは次のページへ）</text>` : ""}`;
+  } else if (draft.subheadline.trim()) {
+    contentBlock = `<text x="${LEFT_X}" y="${ruleY + 90}" class="sub">${escapeXml(draft.subheadline)}</text>`;
+  } else {
+    contentBlock = ""; // narrative cover with no answer to give away — leave as whitespace, per strategy doc ch.13
+  }
+
+  const pageIndicator = pageInfo
+    ? `<text x="1016" y="1000" text-anchor="end" class="pageIndicator">${String(pageInfo.order).padStart(2, "0")} / ${String(pageInfo.total).padStart(2, "0")}</text>`
+    : "";
 
   return `
   <svg width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
@@ -142,14 +205,15 @@ export function buildLayoutSvg(draft: Pick<GeneratedDraft, "eyebrow"> & { headli
     </defs>
     ${clinicStyle(accentColor)}
     <rect x="0" y="0" width="1080" height="1080" fill="url(#veil)"/>
-    <rect x="72" y="100" width="7" height="880" fill="${GOLD}"/>
-    <rect x="78" y="100" width="546" height="6" fill="${accentColor}"/>
-    <text x="116" y="164" class="eyebrow">${escapeXml(draft.eyebrow.toUpperCase())}</text>
-    <text x="112" y="315" class="headline">${escapeXml(line1 ?? "")}</text>
-    ${line2Svg}
-    ${subheadlineBlock}
-    <text x="114" y="919" class="clinic">いしだ皮フ科・美容皮膚科</text>
-    <text x="114" y="960" class="station">東大宮駅東口 徒歩1分</text>
+    <text x="${LEFT_X}" y="108" class="eyebrow">${escapeXml(eyebrowText)}</text>
+    <line x1="${eyebrowLineStartX}" y1="100" x2="620" y2="100" stroke="${accentColor}" stroke-width="2"/>
+    ${headlineSvg}
+    <rect x="${LEFT_X}" y="${ruleY}" width="600" height="3" fill="${accentColor}"/>
+    ${contentBlock}
+    <text x="${LEFT_X}" y="1000" class="clinic">いしだ皮フ科・美容皮膚科</text>
+    <text x="398" y="1000" class="footerDivider">｜</text>
+    <text x="420" y="1000" class="station">東大宮駅東口 徒歩1分</text>
+    ${pageIndicator}
   </svg>`;
 }
 
@@ -203,7 +267,7 @@ export function buildCarouselInformationSvg(slide: GeneratedCarouselSlide, eyebr
       .pageTotal { font-family: ${FONT}; font-size: 20px; font-weight: 400; fill: ${GOLD}; opacity: 0.55; }
       .reservation { font-family: ${FONT}; font-size: 22px; font-weight: 700; fill: ${IVORY}; }
       .clinic { font-family: ${FONT}; font-size: 24px; font-weight: 700; fill: ${INK}; }
-      .station { font-family: ${FONT}; font-size: 18px; font-weight: 400; fill: ${accentColor}; }
+      .station { font-family: ${FONT}; font-size: 18px; font-weight: 400; fill: ${MUTED}; }
     </style>
     <rect x="0" y="0" width="1080" height="1080" fill="${IVORY}"/>
     <g transform="${arcTransform}" opacity="0.14">
