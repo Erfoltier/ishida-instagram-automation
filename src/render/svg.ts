@@ -70,12 +70,14 @@ function splitCarouselText(value: string, maxLineLength = 15) {
 }
 
 /**
- * Brand palette (2026-09-26 revision): unified with the clinic's actual
- * published post (instagram.com/p/Ddb5wNKksMS/) — bold Gothic (Noto Sans), not
- * Mincho serif; ivory background; accent color for the eyebrow/rule/price;
- * near-black headline; muted warm-gray fine print/footer, matching that post's
- * eyebrow-rule / bold headline / big colored price / gray fine-print / footer
- * structure exactly instead of the earlier serif template.
+ * Brand palette (2026-09-26 revision, corrected): unified with the clinic's
+ * actual published post (instagram.com/p/Ddb5wNKksMS/). A close look at the
+ * full-resolution image shows pointed, brush-tapered serifs on both the kanji
+ * and the Latin numerals — a decorative Mincho display face, NOT Gothic (an
+ * earlier pass here misread a low-res copy as bold sans and switched the whole
+ * template to Noto Sans; that was wrong). Using Shippori Mincho, a Google
+ * Fonts face built for exactly this kind of dramatic Japanese headline, with
+ * Noto Serif CJK JP as the fallback for any glyph it doesn't cover.
  */
 const INK = "#3C3033";
 const SUB_ACCENT = "#C98F96";
@@ -83,7 +85,7 @@ const GOLD = "#A58B62";
 const IVORY = "#FFFAFA";
 const IVORY_PANEL = "#FBF4F3";
 const MUTED = "#8A8078";
-const FONT = "'Noto Sans CJK JP', 'Noto Sans JP', sans-serif";
+const FONT = "'Shippori Mincho', 'Noto Serif CJK JP', 'Noto Serif JP', serif";
 
 /** Crude Latin-glyph width estimate (uppercase, bold) for sizing the eyebrow's trailing rule line. */
 function estimateLatinLabelWidth(text: string, fontSize: number, letterSpacing: number): number {
@@ -110,13 +112,13 @@ function clinicStyle(accentColor: string) {
   return `
 <style>
   .eyebrow { font-family: ${FONT}; font-size: 23px; font-weight: 700; letter-spacing: 6px; fill: ${accentColor}; }
-  .headline { font-family: ${FONT}; font-size: 80px; font-weight: 700; letter-spacing: -2px; fill: ${INK}; }
+  .headline { font-family: ${FONT}; font-size: 80px; font-weight: 800; letter-spacing: -1px; fill: ${INK}; }
   .sub { font-family: ${FONT}; font-size: 30px; font-weight: 400; fill: ${accentColor}; }
   .clinic { font-family: ${FONT}; font-size: 26px; font-weight: 700; fill: ${INK}; }
   .footerDivider { font-family: ${FONT}; font-size: 24px; font-weight: 400; fill: ${MUTED}; }
   .station { font-family: ${FONT}; font-size: 20px; font-weight: 400; fill: ${MUTED}; }
   .pageIndicator { font-family: ${FONT}; font-size: 20px; font-weight: 400; fill: ${MUTED}; }
-  .priceValue { font-family: ${FONT}; font-size: 92px; font-weight: 700; fill: ${accentColor}; }
+  .priceValue { font-family: ${FONT}; font-size: 92px; font-weight: 800; fill: ${accentColor}; }
   .priceSuffix { font-family: ${FONT}; font-size: 34px; font-weight: 700; fill: ${accentColor}; }
   .treatmentName { font-family: ${FONT}; font-size: 36px; font-weight: 700; fill: ${accentColor}; }
   .fineprint { font-family: ${FONT}; font-size: 24px; font-weight: 400; fill: ${MUTED}; }

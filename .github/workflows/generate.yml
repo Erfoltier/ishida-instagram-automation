@@ -23,11 +23,18 @@ jobs:
         with:
           node-version: "20"
       - run: npm ci
-      # ubuntu-latest ships no CJK fonts. All on-image text is Noto Sans JP (Gothic,
-      # matching the clinic's actual Instagram template) — apt's fonts-noto-cjk
-      # package already covers Sans, so no extra font download is needed here.
+      # ubuntu-latest ships no CJK fonts. Headline/price text is Shippori Mincho
+      # (matching the clinic's actual Instagram template's brush-serif display
+      # face) with Noto Serif CJK JP as the fallback for glyphs it doesn't cover
+      # — apt's fonts-noto-cjk is Sans-only, so fetch the Serif OTF directly too.
       - run: |
           sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+          sudo mkdir -p /usr/share/fonts/opentype/noto-serif-cjk /usr/share/fonts/truetype/shippori-mincho
+          sudo curl -fsSL -o /usr/share/fonts/opentype/noto-serif-cjk/NotoSerifCJKjp-Regular.otf https://github.com/googlefonts/noto-cjk/raw/main/Serif/OTF/Japanese/NotoSerifCJKjp-Regular.otf
+          sudo curl -fsSL -o /usr/share/fonts/opentype/noto-serif-cjk/NotoSerifCJKjp-Bold.otf https://github.com/googlefonts/noto-cjk/raw/main/Serif/OTF/Japanese/NotoSerifCJKjp-Bold.otf
+          sudo curl -fsSL -o /usr/share/fonts/truetype/shippori-mincho/ShipporiMincho-Regular.ttf https://github.com/google/fonts/raw/main/ofl/shipporimincho/ShipporiMincho-Regular.ttf
+          sudo curl -fsSL -o /usr/share/fonts/truetype/shippori-mincho/ShipporiMincho-Bold.ttf https://github.com/google/fonts/raw/main/ofl/shipporimincho/ShipporiMincho-Bold.ttf
+          sudo curl -fsSL -o /usr/share/fonts/truetype/shippori-mincho/ShipporiMincho-ExtraBold.ttf https://github.com/google/fonts/raw/main/ofl/shipporimincho/ShipporiMincho-ExtraBold.ttf
           fc-cache -f
       - id: generate
         run: npm run generate
