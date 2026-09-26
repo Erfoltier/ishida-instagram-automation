@@ -89,7 +89,7 @@ const FONT = "'Shippori Mincho', 'Noto Serif CJK JP', 'Noto Serif JP', serif";
 
 /** Crude Latin-glyph width estimate (uppercase, bold) for sizing the eyebrow's trailing rule line. */
 function estimateLatinLabelWidth(text: string, fontSize: number, letterSpacing: number): number {
-  return text.length * (fontSize * 0.62 + letterSpacing);
+  return text.length * (fontSize * 0.68 + letterSpacing);
 }
 
 /**
@@ -108,20 +108,24 @@ export function pickAccentColor(seed: string): string {
   return ACCENT_PALETTE[hash % ACCENT_PALETTE.length]!;
 }
 
+// Font sizes/positions below are measured directly off the reference post's full-resolution
+// image (instagram.com/p/Ddb5wNKksMS/), by sampling pixel columns/rows against the flat ivory
+// background to find each text block's cap-height, per-character advance width, and baseline
+// position, then scaling from its 1254px image to this 1080px canvas (factor 0.8613).
 function clinicStyle(accentColor: string) {
   return `
 <style>
-  .eyebrow { font-family: ${FONT}; font-size: 23px; font-weight: 700; letter-spacing: 6px; fill: ${accentColor}; }
+  .eyebrow { font-family: ${FONT}; font-size: 30px; font-weight: 700; letter-spacing: 6px; fill: ${accentColor}; }
   .headline { font-family: ${FONT}; font-size: 80px; font-weight: 800; letter-spacing: -1px; fill: ${INK}; }
   .sub { font-family: ${FONT}; font-size: 30px; font-weight: 400; fill: ${accentColor}; }
-  .clinic { font-family: ${FONT}; font-size: 26px; font-weight: 700; fill: ${INK}; }
+  .clinic { font-family: ${FONT}; font-size: 30px; font-weight: 700; fill: ${INK}; }
   .footerDivider { font-family: ${FONT}; font-size: 24px; font-weight: 400; fill: ${MUTED}; }
-  .station { font-family: ${FONT}; font-size: 20px; font-weight: 400; fill: ${MUTED}; }
+  .station { font-family: ${FONT}; font-size: 22px; font-weight: 400; fill: ${MUTED}; }
   .pageIndicator { font-family: ${FONT}; font-size: 20px; font-weight: 400; fill: ${MUTED}; }
-  .priceValue { font-family: ${FONT}; font-size: 92px; font-weight: 800; fill: ${accentColor}; }
-  .priceSuffix { font-family: ${FONT}; font-size: 34px; font-weight: 700; fill: ${accentColor}; }
-  .treatmentName { font-family: ${FONT}; font-size: 36px; font-weight: 700; fill: ${accentColor}; }
-  .fineprint { font-family: ${FONT}; font-size: 24px; font-weight: 400; fill: ${MUTED}; }
+  .priceValue { font-family: ${FONT}; font-size: 90px; font-weight: 800; fill: ${accentColor}; }
+  .priceSuffix { font-family: ${FONT}; font-size: 60px; font-weight: 700; fill: ${accentColor}; }
+  .treatmentName { font-family: ${FONT}; font-size: 48px; font-weight: 700; fill: ${accentColor}; }
+  .fineprint { font-family: ${FONT}; font-size: 28px; font-weight: 400; fill: ${MUTED}; }
 </style>`;
 }
 
@@ -154,17 +158,17 @@ export function buildLayoutSvg(
   accentColor: string = ACCENT_PALETTE[0],
   pageInfo?: { order: number; total: number }
 ) {
-  const LEFT_X = 64;
+  const LEFT_X = 38;
   const headlineLines = splitHeadline(draft.headline);
-  const headlineBaseY = 280;
-  const headlineLineHeight = 92;
+  const headlineBaseY = 315;
+  const headlineLineHeight = 95;
   const headlineSvg = headlineLines
     .map((line, index) => `<text x="${LEFT_X}" y="${headlineBaseY + index * headlineLineHeight}" class="headline">${escapeXml(line)}</text>`)
     .join("");
-  const ruleY = headlineBaseY + (headlineLines.length - 1) * headlineLineHeight + 50;
+  const ruleY = headlineBaseY + (headlineLines.length - 1) * headlineLineHeight + 46;
 
   const eyebrowText = draft.eyebrow.toUpperCase();
-  const eyebrowLineStartX = LEFT_X + estimateLatinLabelWidth(eyebrowText, 23, 6) + 28;
+  const eyebrowLineStartX = LEFT_X + estimateLatinLabelWidth(eyebrowText, 30, 6) + 28;
 
   let contentBlock: string;
   if (draft.priceInfo) {
@@ -175,10 +179,10 @@ export function buildLayoutSvg(
     const priceMatch = draft.priceInfo.price.match(/^([\d,]+)(.*)$/);
     const priceMain = priceMatch ? priceMatch[1]! : draft.priceInfo.price;
     const priceSuffix = priceMatch ? priceMatch[2]! : "";
-    const priceY = ruleY + 130;
-    const treatmentY = priceY + 70;
-    const fineprint1Y = treatmentY + 56;
-    const fineprint2Y = fineprint1Y + 40;
+    const priceY = ruleY + 217;
+    const treatmentY = priceY + 111;
+    const fineprint1Y = treatmentY + 68;
+    const fineprint2Y = fineprint1Y + 75;
     contentBlock = `
     <text x="${LEFT_X}" y="${priceY}" class="priceValue">${escapeXml(priceMain)}<tspan class="priceSuffix">${escapeXml(priceSuffix)}</tspan></text>
     <text x="${LEFT_X}" y="${treatmentY}" class="treatmentName">${escapeXml(draft.priceInfo.treatmentName)}</text>
@@ -191,7 +195,7 @@ export function buildLayoutSvg(
   }
 
   const pageIndicator = pageInfo
-    ? `<text x="1016" y="1000" text-anchor="end" class="pageIndicator">${String(pageInfo.order).padStart(2, "0")} / ${String(pageInfo.total).padStart(2, "0")}</text>`
+    ? `<text x="1016" y="1041" text-anchor="end" class="pageIndicator">${String(pageInfo.order).padStart(2, "0")} / ${String(pageInfo.total).padStart(2, "0")}</text>`
     : "";
 
   return `
@@ -207,14 +211,14 @@ export function buildLayoutSvg(
     </defs>
     ${clinicStyle(accentColor)}
     <rect x="0" y="0" width="1080" height="1080" fill="url(#veil)"/>
-    <text x="${LEFT_X}" y="108" class="eyebrow">${escapeXml(eyebrowText)}</text>
-    <line x1="${eyebrowLineStartX}" y1="100" x2="620" y2="100" stroke="${accentColor}" stroke-width="2"/>
+    <text x="${LEFT_X}" y="106" class="eyebrow">${escapeXml(eyebrowText)}</text>
+    <line x1="${eyebrowLineStartX}" y1="98" x2="640" y2="98" stroke="${accentColor}" stroke-width="2"/>
     ${headlineSvg}
-    <rect x="${LEFT_X}" y="${ruleY}" width="600" height="3" fill="${accentColor}"/>
+    <rect x="${LEFT_X}" y="${ruleY}" width="620" height="3" fill="${accentColor}"/>
     ${contentBlock}
-    <text x="${LEFT_X}" y="1000" class="clinic">いしだ皮フ科・美容皮膚科</text>
-    <text x="398" y="1000" class="footerDivider">｜</text>
-    <text x="420" y="1000" class="station">東大宮駅東口 徒歩1分</text>
+    <text x="${LEFT_X}" y="1041" class="clinic">いしだ皮フ科・美容皮膚科</text>
+    <text x="435" y="1041" class="footerDivider">｜</text>
+    <text x="457" y="1041" class="station">東大宮駅東口 徒歩1分</text>
     ${pageIndicator}
   </svg>`;
 }
