@@ -217,13 +217,23 @@ export type PublishedPostRecord = { subject: string; publishedAt: string; articl
 
 /**
  * Sequential editorial calendar (M1-01 -> M4-12), not a priority/season rotation:
- * publish the first articleId that hasn't appeared in history yet. Falls back to
- * matching on `subject` for history entries recorded before articleId existed.
+ * publish the first articleId that hasn't appeared in history yet, and isn't
+ * already sitting in an open approval Issue (`pendingArticleIds` — see
+ * listOpenDraftArticleIds in src/approval/issue.ts). Without that second check,
+ * re-running the generate workflow before staff approve the current draft would
+ * pick the same next-in-sequence article again and create a duplicate.
+ * Falls back to matching on `subject` for history entries recorded before
+ * articleId existed.
  */
-export function selectScheduledTheme(publishedPosts: PublishedPostRecord[]): ScheduledTheme {
+export function selectScheduledTheme(
+  publishedPosts: PublishedPostRecord[],
+  pendingArticleIds: ReadonlySet<string> = new Set()
+): ScheduledTheme {
   const publishedIds = new Set(publishedPosts.map(post => post.articleId).filter(Boolean));
   const publishedSubjects = new Set(publishedPosts.map(post => post.subject));
-  const next = SCHEDULED_THEME_CATALOG.find(theme => !publishedIds.has(theme.articleId) && !publishedSubjects.has(theme.subject));
+  const next = SCHEDULED_THEME_CATALOG.find(
+    theme => !publishedIds.has(theme.articleId) && !publishedSubjects.has(theme.subject) && !pendingArticleIds.has(theme.articleId)
+  );
   return next ?? SCHEDULED_THEME_CATALOG[SCHEDULED_THEME_CATALOG.length - 1]!;
 }
 

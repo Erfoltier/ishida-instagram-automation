@@ -25,6 +25,7 @@ async function githubFetch(path: string, init: RequestInit) {
 
 export type DraftIssueInput = {
   draftId: string;
+  articleId: string;
   subject: string;
   caption: string;
   hashtags: string[];
@@ -45,6 +46,7 @@ export async function createDraftApprovalIssue(input: DraftIssueInput): Promise<
   const body = `## 投稿案: ${input.subject}
 
 <!-- draft-id: ${input.draftId} -->
+<!-- article-id: ${input.articleId} -->
 ${manualPhotoWarning}
 ### キャプション
 
@@ -93,6 +95,20 @@ export function extractDraftIdFromIssueBody(body: string): string {
   const match = body.match(/<!-- draft-id: (.+?) -->/);
   if (!match) throw new Error("Issue本文からdraft-idを抽出できませんでした。");
   return match[1]!;
+}
+
+/**
+ * articleIds already sitting in an open (not yet approved/closed) approval Issue.
+ * Re-running the generate workflow before staff approve the current draft would
+ * otherwise pick the same next-in-sequence article again — see selectScheduledTheme
+ * in src/content/themes.ts, which excludes these in addition to published posts.
+ */
+export async function listOpenDraftArticleIds(): Promise<Set<string>> {
+  const issues = (await githubFetch(`/issues?state=open&labels=${APPROVAL_LABEL}&per_page=100`, { method: "GET" })) as Array<{ body: string | null }>;
+  const articleIds = issues
+    .map(issue => issue.body?.match(/<!-- article-id: (.+?) -->/)?.[1])
+    .filter((id): id is string => Boolean(id));
+  return new Set(articleIds);
 }
 
 export function isApprovalComment(commentBody: string): boolean {

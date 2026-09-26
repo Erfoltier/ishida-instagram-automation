@@ -5,6 +5,7 @@ import { buildRawGithubUrl } from "../src/publish/instagramGraph";
 
 type Manifest = {
   draftId: string;
+  articleId: string;
   subject: string;
   caption: string;
   hashtags: string[];
@@ -31,6 +32,7 @@ async function main() {
 
   const { issueNumber, url } = await createDraftApprovalIssue({
     draftId: manifest.draftId,
+    articleId: manifest.articleId,
     subject: manifest.subject,
     caption: manifest.caption,
     hashtags: manifest.hashtags,

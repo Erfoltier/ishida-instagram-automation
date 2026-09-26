@@ -6,6 +6,7 @@ import { createPostCopy, createCarouselSlideCopy } from "../src/content/draftGen
 import { estimateSlideCount, buildCarouselSlidePlan } from "../src/content/carouselPlan";
 import { renderCarouselSlides } from "../src/render/renderSlides";
 import { readPostHistory } from "../src/state/history";
+import { listOpenDraftArticleIds } from "../src/approval/issue";
 
 async function main() {
   const requestedSubject = process.env.THEME_SUBJECT?.trim();
@@ -15,8 +16,13 @@ async function main() {
     if (!theme) throw new Error(`指定されたテーマ「${requestedSubject}」がSCHEDULED_THEME_CATALOGに見つかりません。`);
     console.log(`指定テーマ: ${theme.subject}`);
   } else {
-    const history = await readPostHistory();
-    theme = selectScheduledTheme(history);
+    const [history, pendingArticleIds] = await Promise.all([readPostHistory(), listOpenDraftArticleIds()]);
+    theme = selectScheduledTheme(history, pendingArticleIds);
+    if (pendingArticleIds.has(theme.articleId)) {
+      throw new Error(
+        `次の記事「${theme.subject}」(${theme.articleId}) はまだ承認待ちのIssueがあります。承認またはクローズしてから再実行してください。`
+      );
+    }
     console.log(`自動選定テーマ: ${theme.subject}`);
   }
 
