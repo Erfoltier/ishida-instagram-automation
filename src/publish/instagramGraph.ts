@@ -52,6 +52,62 @@ export async function publishCarouselPost(input: { imageUrls: string[]; caption:
   return { mediaId, containerId };
 }
 
+const REEL_STATUS_POLL_INTERVAL_MS = 10_000;
+const REEL_STATUS_TIMEOUT_MS = 10 * 60_000;
+
+/**
+ * Reels are processed asynchronously on Meta's side: the container must reach
+ * status_code FINISHED before media_publish accepts it.
+ */
+async function waitForContainerReady(containerId: string, accessToken: string): Promise<void> {
+  const deadline = Date.now() + REEL_STATUS_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const body = await graphFetch(`https://graph.instagram.com/${API_VERSION}/${containerId}?fields=status_code,status`, {
+      method: "GET",
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+    const statusCode = body.status_code as string | undefined;
+    if (statusCode === "FINISHED") return;
+    if (statusCode === "ERROR" || statusCode === "EXPIRED") {
+      throw new Error(`リール動画の処理に失敗しました (${statusCode}): ${String(body.status ?? "")}`);
+    }
+    await new Promise(resolve => setTimeout(resolve, REEL_STATUS_POLL_INTERVAL_MS));
+  }
+  throw new Error("リール動画の処理が時間内に完了しませんでした。");
+}
+
+export async function publishReelPost(input: { videoUrl: string; coverUrl: string; caption: string }): Promise<{ mediaId: string; containerId: string }> {
+  const accessToken = requireEnv("META_IG_ACCESS_TOKEN");
+  const accountId = requireEnv("META_IG_PROFESSIONAL_ACCOUNT_ID");
+
+  const containerBody = await graphFetch(`https://graph.instagram.com/${API_VERSION}/${accountId}/media`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      media_type: "REELS",
+      video_url: input.videoUrl,
+      cover_url: input.coverUrl,
+      caption: input.caption,
+      share_to_feed: true,
+      is_ai_generated: true,
+    }),
+  });
+  const containerId = containerBody.id as string | undefined;
+  if (!containerId) throw new Error("リールコンテナの作成に失敗しました。");
+
+  await waitForContainerReady(containerId, accessToken);
+
+  const publishBody = await graphFetch(`https://graph.instagram.com/${API_VERSION}/${accountId}/media_publish`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
+    body: JSON.stringify({ creation_id: containerId }),
+  });
+  const mediaId = publishBody.id as string | undefined;
+  if (!mediaId) throw new Error("リール公開に失敗しました。");
+
+  return { mediaId, containerId };
+}
+
 /**
  * Meta requires image_url to be a URL their servers can fetch unauthenticated —
  * this only works if the GitHub repo (or a mirror of it) is PUBLIC. See README.

@@ -3,15 +3,15 @@ import type { CarouselSlidePlan, CarouselSlideKind } from "./carouselPlan";
 import type { ScheduledTheme } from "./themes";
 
 const LINE_URL = "https://lin.ee/OFlfdeH";
-const CLINIC_INFO_BLOCK = "いしだ皮フ科・美容皮膚科\n東大宮駅東口 徒歩1分\n美容診療：水曜・祝日・特別診療日／予約制";
-const BOOKING_BLOCK = `ご予約・ご相談はプロフィールの公式LINEから承っています。\n${LINE_URL}\n※DMでは個別の診療相談・予約を承っていません。`;
+export const CLINIC_INFO_BLOCK = "いしだ皮フ科・美容皮膚科\n東大宮駅東口 徒歩1分\n美容診療：水曜・祝日・特別診療日／予約制";
+export const BOOKING_BLOCK = `ご予約・ご相談はプロフィールの公式LINEから承っています。\n${LINE_URL}\n※DMでは個別の診療相談・予約を承っていません。`;
 const BANNED_PATTERNS = [
   "必ず", "絶対", "完治", "治る", "最安", "No\\.1", "ナンバーワン", "症例写真", "ビフォー", "アフター",
   "最短", "永久", "劇的", "保証", "限定価格", "診察室", "院内写真",
   "地域最安", "絶対お得", "一瞬で", "放置すると手遅れ", "人気No", "効果人気",
 ];
 /** Stock AI-cliche phrases the grounded prompt should never fall back to when the source text runs out. */
-const AI_CLICHE_PATTERNS = [
+export const AI_CLICHE_PATTERNS = [
   "人それぞれ", "肌の状態は人によって", "選択肢を検討しましょう", "自分に合った方法を見つけ", "焦らず向き合",
 ];
 
@@ -35,7 +35,7 @@ export type GeneratedDraft = {
   complianceNotes: string;
 };
 
-function assertNoBannedPatterns(combinedText: string) {
+export function assertNoBannedPatterns(combinedText: string) {
   const matched = BANNED_PATTERNS.filter(pattern => new RegExp(pattern, "i").test(combinedText));
   if (matched.length > 0) throw new MedicalAdvertisingCopyError(matched);
 }
