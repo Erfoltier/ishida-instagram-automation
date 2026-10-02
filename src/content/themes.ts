@@ -227,15 +227,22 @@ export type PublishedPostRecord = { subject: string; publishedAt: string; articl
  */
 export function selectScheduledTheme(
   publishedPosts: PublishedPostRecord[],
-  pendingArticleIds: ReadonlySet<string> = new Set()
+  pendingArticleIds: ReadonlySet<string> = new Set(),
+  catalog: readonly ScheduledTheme[] = SCHEDULED_THEME_CATALOG
 ): ScheduledTheme {
   const publishedIds = new Set(publishedPosts.map(post => post.articleId).filter(Boolean));
   const publishedSubjects = new Set(publishedPosts.map(post => post.subject));
-  const next = SCHEDULED_THEME_CATALOG.find(
+  const next = catalog.find(
     theme => !publishedIds.has(theme.articleId) && !publishedSubjects.has(theme.subject) && !pendingArticleIds.has(theme.articleId)
   );
-  return next ?? SCHEDULED_THEME_CATALOG[SCHEDULED_THEME_CATALOG.length - 1]!;
+  return next ?? catalog[catalog.length - 1]!;
 }
+
+/**
+ * Reels can't use 症例 articles: those need real consented photos (strategy doc
+ * ch.9), and the reel pipeline only has the AI cover photo + texture library.
+ */
+export const REEL_THEME_CATALOG: readonly ScheduledTheme[] = SCHEDULED_THEME_CATALOG.filter(theme => !theme.requiresManualPhoto);
 
 export function getThemeSourceUrls(theme: ScheduledTheme): string[] {
   return theme.sourceUrls;

@@ -28,12 +28,13 @@ description: Remotion で Instagram リール動画（1080x1920）を作成・�
 - 台本の文字数上限は `src/content/reelScript.ts` の `REEL_TEXT_LIMITS`。変えるときはテンプレートの文字サイズも確認する。
 - 症例記事（`requiresManualPhoto: true`）は実写真が必須なのでリールの対象外にする。
 - `remotion`・`@remotion/*` のバージョンは全て同じ値に固定する（`package.json` で `^` を付けない）。
-- Remotion は従業員4人以上の企業が商用利用する場合に有償の Company License が必要。
+- Remotion は従業員4人以上の企業が利用する場合に有償の Company License が必要。
+- 日本語の改行は `lang="ja"` + `word-break: auto-phrase` で文節単位にしている。フォントは `remotion/fonts.ts` で同梱。
 
 ## よく使うコマンド
 
 ```bash
-npx remotion studio remotion/index.ts   # ブラウザでテンプレートをプレビュー（サンプル props）
+npm run studio                           # ブラウザでテンプレートをプレビュー（サンプル props）
 npm run generate-reel                    # 台本生成〜mp4書き出し（ANTHROPIC_API_KEY / OPENAI_API_KEY が必要）
 npm run typecheck
 ```

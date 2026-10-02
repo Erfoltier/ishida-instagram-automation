@@ -127,3 +127,27 @@ GitHub Issueは技術者向けの画面のため、GitHubアカウントを持�
 - 合言葉は全スタッフ共通の1つです。個人ごとのアカウント管理はしていません（元のManusアプリにあった「招待制・個人ログイン」ほどの厳密さはない前提です）
 - 画像の反映には`raw.githubusercontent.com`のキャッシュにより数十秒程度のタイムラグが出ることがあります
 - Cloudflareアカウントの2段階認証など、セキュリティ設定はCloudflare側の推奨に従ってください
+
+## リール動画（Remotion）
+
+カルーセルとは別に、リール用の台本を Claude API で生成し、[Remotion](https://www.remotion.dev/) で縦型動画（1080x1920・約30秒・H.264+AAC）を書き出して、承認後にリールとして公開する。
+
+```
+[毎週水曜 10:00 JST] generate-reel.yml
+  → カルーセルと同じ記事カレンダーから次の記事を選定（症例記事は除外。履歴は data/reel-history.json で別管理）
+  → 公式サイトの参照ページを取得し、Claude APIでリール専用の台本（冒頭フック → ポイント3〜5個 → 締め）を生成
+  → 冒頭の背景写真をOpenAI画像生成、ポイントの背景は assets/texture-photos/ の写真（なければフラットデザイン）
+  → assets/bgm/ の音源をBGMとして合成し、Remotionで reels/<reelId>/reel.mp4 を書き出し
+  → GitHub Issue（ラベル instagram-reel）を起票（表紙・各シーンの静止画・台本・キャプションつき）
+
+[担当者がIssueで "approve" とコメント]
+  → publish-reel.yml が Instagram Graph API でリールを公開（動画処理の完了を待ってから公開）
+  → data/reel-history.json を更新してIssueをクローズ
+```
+
+- テンプレートの見た目は `remotion/Reel.tsx`。`npm run studio` でブラウザ上でプレビューしながら調整できる
+- フォント（Shippori Mincho / Noto Sans JP）は `@fontsource` パッケージで動画に同梱しているため、Actions側でのフォントインストールは不要
+- BGMの置き方と音源の条件は `assets/bgm/README.md` を参照
+- スタッフ用Webページ（`worker/`）はカルーセル専用で、リールの承認はGitHub Issueから行う
+- 動画は `raw.githubusercontent.com` のURLでMetaに渡すため、カルーセルと同じくリポジトリがPublicである必要がある
+- **ライセンス注意:** Remotion は、従業員4人以上の企業が利用する場合に有償の Company License が必要（個人・3人以下の企業は無料）。運用主体の規模に応じて https://www.remotion.pro/ で確認すること
