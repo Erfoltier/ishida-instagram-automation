@@ -151,3 +151,12 @@ GitHub Issueは技術者向けの画面のため、GitHubアカウントを持�
 - スタッフ用Webページ（`worker/`）はカルーセル専用で、リールの承認はGitHub Issueから行う
 - 動画は `raw.githubusercontent.com` のURLでMetaに渡すため、カルーセルと同じくリポジトリがPublicである必要がある
 - **ライセンス注意:** Remotion は、従業員4人以上の企業が利用する場合に有償の Company License が必要（個人・3人以下の企業は無料）。運用主体の規模に応じて https://www.remotion.pro/ で確認すること
+
+## Claude Code のスキル・プラグイン
+
+`.claude/settings.json` で、このリポジトリを開いた Claude Code セッションに次のプラグインを有効化している。
+
+- `claude-plugins-official`（Anthropic公式マーケットプレイス）: `superpowers` / `playwright` / `claude-code-setup` / `frontend-design` / `skill-creator`
+- `openai-codex`: `codex`
+
+Remotion公式のスキル（`.claude/skills/remotion-*`）は [remotion-dev/skills](https://github.com/remotion-dev/skills)（コミット `0b5db9d`）をそのまま取り込んだもの。更新するときは `npx skills add remotion-dev/skills` で入れ直すか、同リポジトリの `skills/` を上書きコピーする。`.claude/skills/remotion/` はこのリポジトリ独自のリール用スキル。
