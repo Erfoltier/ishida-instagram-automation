@@ -5,7 +5,7 @@ import { writeFile } from "node:fs/promises";
  * generated here, so there is no third-party music licence to track.
  *
  * STYLE=bright (default): bright, clean, refined — major key, piano-like plucks,
- *   a light top melody and soft offbeat ticks (a calm, polished clinic space).
+ *   a harp top melody and soft offbeat ticks (a calm, polished clinic space).
  * STYLE=calm: slower descending pad chords with a music-box arpeggio.
  *
  * Usage: OUT=reels/<id>/assets/bgm.wav SECONDS=30 STYLE=bright npx tsx scripts/synth-bgm.ts
@@ -21,6 +21,7 @@ type Style = {
   arpPattern: number[];
   /** Top melody per 4-bar phrase: [bar, beat, MIDI note]. */
   melody: Array<[number, number, number]>;
+  melodyInstrument: "harp" | "pluck";
   padGain: number;
   pluckGain: number;
   pluckDecay: number;
@@ -44,6 +45,7 @@ const STYLES: Record<string, Style> = {
       [0, 0, 78], [0, 2.5, 81], [1, 0, 76], [1, 2, 73],
       [2, 0, 74], [2, 2.5, 78], [3, 0, 79], [3, 2, 81],
     ],
+    melodyInstrument: "harp",
     padGain: 0.03,
     pluckGain: 0.06,
     pluckDecay: 3.4,
@@ -62,6 +64,7 @@ const STYLES: Record<string, Style> = {
     bass: [41, 40, 38, 36],
     arpPattern: [0, 1, 2, 3, 2, 1, 2, 3],
     melody: [],
+    melodyInstrument: "pluck",
     padGain: 0.05,
     pluckGain: 0.07,
     pluckDecay: 2.4,
@@ -114,6 +117,25 @@ async function main() {
     }
   };
 
+  /**
+   * Harp: additive plucked string. Each harmonic decays faster than the one
+   * below it, so the bright "pling" of the pluck fades into a warm sustain.
+   */
+  const addHarp = (startSec: number, hz: number, gain: number, pan: number) => {
+    const start = Math.floor(startSec * SAMPLE_RATE);
+    const len = Math.floor(4.5 * SAMPLE_RATE);
+    const harmonics = [1, 2, 3, 4, 5, 6].filter(n => hz * n < 12000);
+    for (let i = 0; i < len && start + i < total; i++) {
+      const t = i / SAMPLE_RATE;
+      const attack = Math.min(1, t / 0.004);
+      let wave = 0;
+      for (const n of harmonics) {
+        wave += (Math.sin(2 * Math.PI * hz * n * t) * Math.exp(-t * (0.9 + 1.1 * n))) / n ** 1.4;
+      }
+      mix(start + i, wave * attack * gain, pan);
+    }
+  };
+
   /** Very soft, short high noise "tick" for a light sense of movement. */
   let seed = 7;
   const noise = () => {
@@ -143,7 +165,9 @@ async function main() {
       addPluck(barStart + step * (beat / 2), midiToHz(note), style.pluckGain, style.pluckDecay, step % 2 === 0 ? -0.35 : 0.35);
     }
     for (const [mBar, mBeat, note] of style.melody) {
-      if (mBar === bar % 4 && bar >= 2) addPluck(barStart + mBeat * beat, midiToHz(note), style.pluckGain * 0.85, 2.0, 0.1);
+      if (mBar !== bar % 4 || bar < 2) continue;
+      if (style.melodyInstrument === "harp") addHarp(barStart + mBeat * beat, midiToHz(note), style.pluckGain * 1.5, 0.1);
+      else addPluck(barStart + mBeat * beat, midiToHz(note), style.pluckGain * 0.85, 2.0, 0.1);
     }
     if (style.ticks && bar >= 1) {
       for (let b = 0; b < 4; b++) addTick(barStart + (b + 0.5) * beat, 0.05, b % 2 === 0 ? 0.3 : -0.3);
