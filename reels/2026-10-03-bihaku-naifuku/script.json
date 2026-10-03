@@ -1,0 +1,38 @@
+{
+  "articleId": "MANUAL-2026-10-bihaku-naifuku",
+  "subject": "美白内服、中身と量で選んでいますか？",
+  "eyebrow": "VITAMIN C",
+  "accentColor": "#6B7B5E",
+  "hook": "美白内服、中身と量で選んでいますか？",
+  "hookPhoto": "photos/hook.jpg",
+  "scenes": [
+    {
+      "heading": "定番はシナール＋ユベラ",
+      "body": "一般的な量は、ビタミンC約600mg・ビタミンE約150IU/日ほどです。",
+      "photo": "photos/s1.jpg"
+    },
+    {
+      "heading": "研究で使われた量とは大きな差",
+      "body": "紫外線ダメージの軽減が報告された研究では、C 2〜3g・E 1000IU以上が使われています。",
+      "photo": "photos/s2.jpg"
+    },
+    {
+      "heading": "ビタミンCは「多めに、分けて」",
+      "body": "1g以上を数回に分けて飲むと、血中濃度をより高く保てると報告されています。",
+      "photo": "photos/s3.jpg"
+    },
+    {
+      "heading": "当院のビタミンC 3000mg",
+      "body": "1日3000mgを朝晩に分けて。紫外線対策サプリ「ソルプロ」とのセットもあります。",
+      "photo": "photos/s4.jpg"
+    },
+    {
+      "heading": "肝斑には別のアプローチも",
+      "body": "トラネキサム酸の内服という選択肢も。体質や服用中のお薬を確認して処方します。",
+      "photo": "photos/s5.jpg"
+    }
+  ],
+  "closing": "保険で治療できるシミも。まずは診察でご相談ください",
+  "captionFile": "manuscripts/2026-10-bihaku-naifuku.txt",
+  "complianceNotes": "他院名は出さず「一般的な処方量」との比較にとどめた。シナール＋ユベラを「効かない」とは表現していない。ソルプロは食品のため効能を書かず「紫外線対策サプリ」とした。トラネキサム酸と保険診療は別シーンに分けた。費用・副作用はキャプションに記載。背景画像はAI生成（文字・製品パッケージ・人物なし）。"
+}

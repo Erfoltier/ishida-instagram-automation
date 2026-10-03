@@ -34,7 +34,7 @@ function seededPick<T>(items: T[], seed: string): T | null {
 }
 
 /** Royalty-free tracks staff upload to assets/bgm/ (see its README). Deterministic per reel. */
-async function pickBgm(seed: string): Promise<string | null> {
+export async function pickBgm(seed: string): Promise<string | null> {
   try {
     const files = (await readdir(BGM_LIBRARY_ROOT)).filter(file => /\.(mp3|m4a|aac|wav)$/i.test(file)).sort();
     const picked = seededPick(files, seed);
@@ -45,7 +45,7 @@ async function pickBgm(seed: string): Promise<string | null> {
 }
 
 /** The booking line without the URL/DM notice — a URL isn't tappable inside a video. */
-function bookingNoteFromBlock(): string {
+export function bookingNoteFromBlock(): string {
   return BOOKING_BLOCK.split("\n")[0]!.replace(/承っています。$/, "");
 }
 
@@ -96,48 +96,56 @@ export async function renderReel(reelId: string, script: ReelScript, outputDir: 
       bgm,
     };
 
-    const serveUrl = await bundle({ entryPoint: path.join(process.cwd(), "remotion", "index.ts"), publicDir });
-    // Local sandboxes may already have a Chromium; on GitHub Actions leave this
-    // unset and Remotion downloads its own headless shell.
-    const browserExecutable = process.env.REMOTION_BROWSER_EXECUTABLE || null;
-    const composition = await selectComposition({ serveUrl, id: COMPOSITION_ID, inputProps, browserExecutable });
-
-    const videoPath = path.join(outputDir, REEL_VIDEO_FILE_NAME);
-    await renderMedia({
-      serveUrl,
-      composition,
-      inputProps,
-      codec: "h264",
-      audioCodec: "aac",
-      // Instagram Reels spec: H.264 + AAC, yuv420p, 9:16.
-      pixelFormat: "yuv420p",
-      crf: 20,
-      outputLocation: videoPath,
-      browserExecutable,
-    });
-
-    // Stills are taken once the scene's entrance animation has settled.
-    const timeline = buildReelTimeline(inputProps);
-    const settle = (slot: { from: number; durationInFrames: number }) => slot.from + Math.min(slot.durationInFrames - 10, 45);
-    await renderStill({ serveUrl, composition, inputProps, frame: settle(timeline.hook), output: path.join(outputDir, REEL_COVER_FILE_NAME), imageFormat: "jpeg", jpegQuality: 90, browserExecutable });
-    const sceneStillFileNames: string[] = [];
-    for (const [index, slot] of timeline.scenes.entries()) {
-      const fileName = `scene-${String(index + 1).padStart(2, "0")}.jpg`;
-      await renderStill({ serveUrl, composition, inputProps, frame: settle(slot), output: path.join(outputDir, fileName), imageFormat: "jpeg", jpegQuality: 85, browserExecutable });
-      sceneStillFileNames.push(fileName);
-    }
-    const closingStill = "scene-closing.jpg";
-    await renderStill({ serveUrl, composition, inputProps, frame: settle(timeline.closing), output: path.join(outputDir, closingStill), imageFormat: "jpeg", jpegQuality: 85, browserExecutable });
-    sceneStillFileNames.push(closingStill);
-
-    return {
-      videoFileName: REEL_VIDEO_FILE_NAME,
-      coverFileName: REEL_COVER_FILE_NAME,
-      sceneStillFileNames,
-      bgmFileName: bgmPath ? path.basename(bgmPath) : null,
-      durationSeconds: Math.round((composition.durationInFrames / composition.fps) * 10) / 10,
-    };
+    return await renderPreparedReel(inputProps, publicDir, outputDir, bgmPath);
   } finally {
     await rm(publicDir, { recursive: true, force: true });
   }
+}
+
+/**
+ * Bundles the Remotion project against `publicDir` (which must already hold every
+ * file `inputProps` references) and writes reel.mp4, cover.jpg and the scene stills.
+ */
+export async function renderPreparedReel(inputProps: ReelProps, publicDir: string, outputDir: string, bgmPath: string | null): Promise<RenderedReel> {
+  const serveUrl = await bundle({ entryPoint: path.join(process.cwd(), "remotion", "index.ts"), publicDir });
+  // Local sandboxes may already have a Chromium; on GitHub Actions leave this
+  // unset and Remotion downloads its own headless shell.
+  const browserExecutable = process.env.REMOTION_BROWSER_EXECUTABLE || null;
+  const composition = await selectComposition({ serveUrl, id: COMPOSITION_ID, inputProps, browserExecutable });
+
+  const videoPath = path.join(outputDir, REEL_VIDEO_FILE_NAME);
+  await renderMedia({
+    serveUrl,
+    composition,
+    inputProps,
+    codec: "h264",
+    audioCodec: "aac",
+    // Instagram Reels spec: H.264 + AAC, yuv420p, 9:16.
+    pixelFormat: "yuv420p",
+    crf: 20,
+    outputLocation: videoPath,
+    browserExecutable,
+  });
+
+  // Stills are taken once the scene's entrance animation has settled.
+  const timeline = buildReelTimeline(inputProps);
+  const settle = (slot: { from: number; durationInFrames: number }) => slot.from + Math.min(slot.durationInFrames - 10, 45);
+  await renderStill({ serveUrl, composition, inputProps, frame: settle(timeline.hook), output: path.join(outputDir, REEL_COVER_FILE_NAME), imageFormat: "jpeg", jpegQuality: 90, browserExecutable });
+  const sceneStillFileNames: string[] = [];
+  for (const [index, slot] of timeline.scenes.entries()) {
+    const fileName = `scene-${String(index + 1).padStart(2, "0")}.jpg`;
+    await renderStill({ serveUrl, composition, inputProps, frame: settle(slot), output: path.join(outputDir, fileName), imageFormat: "jpeg", jpegQuality: 85, browserExecutable });
+    sceneStillFileNames.push(fileName);
+  }
+  const closingStill = "scene-closing.jpg";
+  await renderStill({ serveUrl, composition, inputProps, frame: settle(timeline.closing), output: path.join(outputDir, closingStill), imageFormat: "jpeg", jpegQuality: 85, browserExecutable });
+  sceneStillFileNames.push(closingStill);
+
+  return {
+    videoFileName: REEL_VIDEO_FILE_NAME,
+    coverFileName: REEL_COVER_FILE_NAME,
+    sceneStillFileNames,
+    bgmFileName: bgmPath ? path.basename(bgmPath) : null,
+    durationSeconds: Math.round((composition.durationInFrames / composition.fps) * 10) / 10,
+  };
 }

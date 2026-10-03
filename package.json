@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "generate-reel": "tsx scripts/generate-reel.ts",
     "publish-reel": "tsx scripts/publish-approved-reel.ts",
-    "studio": "remotion studio remotion/index.ts"
+    "studio": "remotion studio remotion/index.ts",
+    "render-manual-reel": "tsx scripts/render-manual-reel.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
