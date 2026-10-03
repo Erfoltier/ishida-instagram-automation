@@ -1,4 +1,6 @@
 import { Composition } from "remotion";
+import { GlossyReel, buildGlossyTimeline, type GlossyReelProps } from "./GlossyReel";
+import glossySample from "../reels/2026-10-03-txa-glossy/props.json";
 import { Reel } from "./Reel";
 import { REEL_FPS, REEL_HEIGHT, REEL_WIDTH, buildReelTimeline, type ReelProps } from "./timing";
 
@@ -20,6 +22,7 @@ const defaultProps: ReelProps = {
 };
 
 export const RemotionRoot: React.FC = () => (
+  <>
   <Composition
     id="Reel"
     component={Reel}
@@ -30,4 +33,15 @@ export const RemotionRoot: React.FC = () => (
     defaultProps={defaultProps}
     calculateMetadata={({ props }) => ({ durationInFrames: buildReelTimeline(props).durationInFrames })}
   />
+  <Composition
+    id="GlossyReel"
+    component={GlossyReel}
+    fps={REEL_FPS}
+    width={REEL_WIDTH}
+    height={REEL_HEIGHT}
+    durationInFrames={buildGlossyTimeline(glossySample as GlossyReelProps).durationInFrames}
+    defaultProps={glossySample as GlossyReelProps}
+    calculateMetadata={({ props }) => ({ durationInFrames: buildGlossyTimeline(props).durationInFrames })}
+  />
+  </>
 );
