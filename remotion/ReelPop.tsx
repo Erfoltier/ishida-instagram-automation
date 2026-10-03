@@ -373,10 +373,13 @@ const HookScene: React.FC<{ props: ReelPopProps; durationInFrames: number }> = (
     <AbsoluteFill>
       <PhotoBg src={hook.photo} durationInFrames={durationInFrames} />
       <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(46,38,41,0.28) 100%)" }} />
-      <div style={{ position: "absolute", left: SAFE_LEFT, right: SAFE_RIGHT, top: 760, display: "flex", flexDirection: "column", gap: 22 }}>
-        {/* Visible from frame 1 — the opening frame has to carry the hook on its own. */}
-        <div style={{ alignSelf: "flex-start", padding: "14px 30px", borderRadius: 999, backgroundColor: props.accentColor, color: "#FFFFFF", fontFamily: SANS, fontWeight: 800, fontSize: 52, opacity: Math.max(0.85, kicker), transform: `translateY(${(1 - kicker) * 20}px)` }}>
-          {hook.kicker}
+      <div style={{ position: "absolute", left: SAFE_LEFT, right: SAFE_RIGHT, top: 640, display: "flex", flexDirection: "column", gap: 22 }}>
+        {/* Visible from frame 1 — the opening frame has to carry the hook on its own,
+            so the kicker uses the same white telop band as the punch lines, just smaller. */}
+        <div style={{ alignSelf: "flex-start", transform: `scale(${1.08 - 0.08 * kicker})`, transformOrigin: "left center" }}>
+          <span style={{ display: "inline-block", backgroundColor: "#FFFFFF", padding: "8px 26px 14px", borderRadius: 18, borderLeft: `14px solid ${props.accentColor}`, fontFamily: SANS, fontWeight: 900, fontSize: 104, lineHeight: 1.15, color: INK, boxShadow: "0 14px 34px rgba(46,38,41,0.18)" }}>
+            {hook.kicker}
+          </span>
         </div>
         {hook.lines.map((line, i) => (
           <SlamLine key={line} text={line} delay={4 + i * BEAT_FRAMES} color={i === hook.highlightLine ? props.accentColor : INK} size={150} />
@@ -386,7 +389,7 @@ const HookScene: React.FC<{ props: ReelPopProps; durationInFrames: number }> = (
         style={{
           position: "absolute",
           right: SAFE_RIGHT + 10,
-          top: 560,
+          top: 420,
           width: 190,
           height: 190,
           borderRadius: "50%",
