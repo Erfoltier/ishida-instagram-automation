@@ -48,7 +48,7 @@ const GrowingRule: React.FC<{ delay: number; width: number; color: string; thick
 /** Slow Ken Burns zoom over the whole scene. */
 const ZoomingPhoto: React.FC<{ src: string; durationInFrames: number; objectPosition: string }> = ({ src, durationInFrames, objectPosition }) => {
   const frame = useCurrentFrame();
-  const scale = interpolate(frame, [0, durationInFrames], [1, 1.08]);
+  const scale = interpolate(frame, [0, durationInFrames], [1, 1.12]);
   return (
     <Img
       src={staticFile(src)}
@@ -73,7 +73,7 @@ const HookScene: React.FC<{ props: ReelProps; durationInFrames: number }> = ({ p
   return (
     <AbsoluteFill style={{ backgroundColor: IVORY, opacity }}>
       <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: PHOTO_HEIGHT, overflow: "hidden", backgroundColor: props.accentColor }}>
-        {props.hookPhoto && <ZoomingPhoto src={props.hookPhoto} durationInFrames={durationInFrames} objectPosition="right center" />}
+        {props.hookPhoto && <ZoomingPhoto src={props.hookPhoto} durationInFrames={durationInFrames} objectPosition="center" />}
       </div>
       <div
         style={{
@@ -123,7 +123,7 @@ const PointScene: React.FC<{ scene: ReelSceneProps; index: number; total: number
     <AbsoluteFill style={{ backgroundColor: IVORY_PANEL, opacity }}>
       <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: VISUAL_HEIGHT, overflow: "hidden", backgroundColor: props.accentColor }}>
         {scene.photo ? (
-          <ZoomingPhoto src={scene.photo} durationInFrames={durationInFrames} objectPosition={index % 2 === 0 ? "center" : "right center"} />
+          <ZoomingPhoto src={scene.photo} durationInFrames={durationInFrames} objectPosition="center" />
         ) : (
           // Flat design (no texture photo uploaded for this category yet) — same
           // fallback idea as the carousel's renderFlatInformationSlide.
