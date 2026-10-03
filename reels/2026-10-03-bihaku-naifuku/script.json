@@ -91,6 +91,6 @@
     "bars": 3
   },
   "bgm": "audio/bgm-chill-house-112bpm.m4a",
-  "captionFile": "manuscripts/2026-10-bihaku-naifuku.txt",
+  "captionFile": "manuscripts/2026-10-bihaku-naifuku-reel.txt",
   "complianceNotes": "他院名は出さず「一般的な処方量」との比較にとどめた。シナール＋ユベラを「効かない」とは表現していない。研究の量は出典を画面に明記。ソルプロは食品のため効能を書かず「セット」として紹介。トラネキサム酸と保険診療は別シーンに分けた。料金は投稿後に修正できるキャプションのみに記載し、動画には入れない（価格改定時に古い料金が残るのを防ぐ）。副作用もキャプションに記載。背景画像はAI生成（文字・製品パッケージ・人物なし）、BGMは scripts/music/chill-house-bgm.py による自作音源（著作権の問題なし）。"
 }
