@@ -96,7 +96,15 @@ export async function renderReel(reelId: string, script: ReelScript, outputDir: 
       bgm,
     };
 
-    return await renderPreparedReel(inputProps, publicDir, outputDir, bgmPath);
+    const timeline = buildReelTimeline(inputProps);
+    return await renderPreparedReel({
+      compositionId: COMPOSITION_ID,
+      inputProps,
+      stillFrames: { hook: timeline.hook, scenes: timeline.scenes, closing: timeline.closing },
+      publicDir,
+      outputDir,
+      bgmPath,
+    });
   } finally {
     await rm(publicDir, { recursive: true, force: true });
   }
@@ -106,12 +114,23 @@ export async function renderReel(reelId: string, script: ReelScript, outputDir: 
  * Bundles the Remotion project against `publicDir` (which must already hold every
  * file `inputProps` references) and writes reel.mp4, cover.jpg and the scene stills.
  */
-export async function renderPreparedReel(inputProps: ReelProps, publicDir: string, outputDir: string, bgmPath: string | null): Promise<RenderedReel> {
+type SceneSlot = { from: number; durationInFrames: number };
+
+export async function renderPreparedReel(options: {
+  compositionId: string;
+  inputProps: Record<string, unknown>;
+  /** Where each scene sits, so a still can be taken once its entrance animation has settled. */
+  stillFrames: { hook: SceneSlot; scenes: SceneSlot[]; closing: SceneSlot };
+  publicDir: string;
+  outputDir: string;
+  bgmPath: string | null;
+}): Promise<RenderedReel> {
+  const { compositionId, inputProps, stillFrames, publicDir, outputDir, bgmPath } = options;
   const serveUrl = await bundle({ entryPoint: path.join(process.cwd(), "remotion", "index.ts"), publicDir });
   // Local sandboxes may already have a Chromium; on GitHub Actions leave this
   // unset and Remotion downloads its own headless shell.
   const browserExecutable = process.env.REMOTION_BROWSER_EXECUTABLE || null;
-  const composition = await selectComposition({ serveUrl, id: COMPOSITION_ID, inputProps, browserExecutable });
+  const composition = await selectComposition({ serveUrl, id: compositionId, inputProps, browserExecutable });
 
   const videoPath = path.join(outputDir, REEL_VIDEO_FILE_NAME);
   await renderMedia({
@@ -127,9 +146,11 @@ export async function renderPreparedReel(inputProps: ReelProps, publicDir: strin
     browserExecutable,
   });
 
-  // Stills are taken once the scene's entrance animation has settled.
-  const timeline = buildReelTimeline(inputProps);
-  const settle = (slot: { from: number; durationInFrames: number }) => slot.from + Math.min(slot.durationInFrames - 10, 45);
+  const timeline = stillFrames;
+  // Default: once the scene's entrance animation has settled. The beat-synced pop
+  // template reveals content over the whole scene, so its stills come from the end.
+  const settle = (slot: { from: number; durationInFrames: number }) =>
+    compositionId === "ReelPop" ? slot.from + slot.durationInFrames - 12 : slot.from + Math.min(slot.durationInFrames - 10, 45);
   await renderStill({ serveUrl, composition, inputProps, frame: settle(timeline.hook), output: path.join(outputDir, REEL_COVER_FILE_NAME), imageFormat: "jpeg", jpegQuality: 90, browserExecutable });
   const sceneStillFileNames: string[] = [];
   for (const [index, slot] of timeline.scenes.entries()) {

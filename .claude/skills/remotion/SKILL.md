@@ -19,6 +19,9 @@ description: Remotion で Instagram リール動画（1080x1920）を作成・�
 | `scripts/generate-reel.ts` | テーマ選定 → 台本生成 → レンダリング → `reels/<reelId>/` に保存 |
 | `scripts/create-reel-issue.ts` | 承認 Issue（ラベル `instagram-reel`）を作成する |
 | `scripts/publish-approved-reel.ts` | `approve` コメントでリールを公開し、`data/reel-history.json` を更新する |
+| `remotion/ReelPop.tsx` / `remotion/popTiming.ts` | 拍同期のテロップ型テンプレート（id: `ReelPop`）。112.5BPM＝1拍16フレームで、場面転換を小節頭に合わせる |
+| `scripts/render-manual-reel.ts` | 手書きの台本 `reels/<reelId>/script.json` から書き出す（`template: "pop"` で ReelPop、省略時は従来の Reel） |
+| `scripts/music/chill-house-bgm.py` | 著作権フリーの自作BGM（チルハウス、112.5BPM）を numpy で合成する。`python3 scripts/music/chill-house-bgm.py out.wav 16` |
 | `assets/bgm/` | BGM（著作権フリーの音源）を置く場所。空なら無音で書き出し、Issue に警告を出す |
 
 ## ルール
