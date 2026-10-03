@@ -4,42 +4,47 @@
   "kicker": "肝斑の飲み薬",
   "hookLines": ["トラネキサム酸で", "血栓ができる？！"],
   "hookSub": "研究データで整理します",
+  "hookSeconds": 3.5,
   "scenes": [
     {
       "label": "WHY?",
       "heading": "なぜ血栓が心配される？",
       "bubbles": ["出血を\n止める薬", "肝斑の\n治療にも"],
-      "body": "できた血のかたまりを溶けにくくする働きがあるため、「血栓ができやすくなるのでは」と心配されることがあります。"
+      "body": "血のかたまりを溶けにくくする働きがあるためです。",
+      "seconds": 4.5
     },
     {
       "label": "DATA 01",
-      "heading": "肝斑で内服した561人の研究では",
+      "heading": "肝斑で内服した561人では",
       "stat": { "caption": "血栓症がみられたのは", "value": "1", "unit": "人" },
-      "body": "その方は、もともと血栓ができやすい体質だったことが後から分かったと報告されています。",
-      "note": "Lee HC, et al. J Am Acad Dermatol. 2016"
+      "body": "その方は、血栓ができやすい体質だったと後に分かっています。",
+      "note": "Lee HC, et al. J Am Acad Dermatol. 2016",
+      "seconds": 4.5
     },
     {
       "label": "DATA 02",
       "heading": "各682人を比べた解析では",
       "stat": { "caption": "内服と血栓症の関連は", "value": "なし", "unit": "" },
-      "body": "肝斑の患者さんの大規模データで、内服した人・しなかった人を比べた結果です。",
-      "note": "※血栓のリスクが高い方は解析の対象外です\nHernandez T, et al. JAAD Int. 2025"
+      "note": "※血栓のリスクが高い方は解析の対象外です\nHernandez T, et al. JAAD Int. 2025",
+      "seconds": 4
     },
     {
       "label": "CHECK",
       "heading": "こんな方は処方前に医師へ",
-      "bubbles": ["ピルなどの\nホルモン剤", "血栓症の\n既往・家族歴", "喫煙習慣", "妊娠中・\n妊娠の可能性"]
+      "bubbles": ["ピルなどの\nホルモン剤", "血栓症の\n既往・家族歴", "喫煙習慣", "妊娠中・\n妊娠の可能性"],
+      "seconds": 4.5
     },
     {
       "label": "CAUTION",
       "heading": "服用中にこんな症状はすぐ受診",
       "bubbles": ["片脚の\n腫れ・痛み", "急な\n息切れ", "胸の痛み"],
-      "body": "服用を中止して、医療機関を受診してください。"
+      "seconds": 4
     }
   ],
   "closingLines": ["リスクはゼロではないが", "まれとされています"],
   "closingSub": "むやみに怖がらず、確認してから。",
   "closingNote": "一方で、リスク上昇を示唆する報告もあり、研究は現在も続いています。",
+  "closingSeconds": 5,
   "clinicInfo": ["いしだ皮フ科・美容皮膚科", "東大宮駅東口 徒歩1分"],
-  "bgm": null
+  "bgm": "bgm.wav"
 }

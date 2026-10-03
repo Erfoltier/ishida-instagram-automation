@@ -17,6 +17,8 @@ export type GlossyScene = {
   /** Short phrases shown as round bubble badges. "\n" forces a line break inside a bubble. */
   bubbles?: string[];
   body?: string;
+  /** Overrides the reading-speed estimate when the reel has a fixed target length. */
+  seconds?: number;
   /** Small print under the panel (source, caveat). */
   note?: string;
 };
@@ -27,6 +29,8 @@ export type GlossyReelProps = {
   kicker: string;
   hookLines: string[];
   hookSub: string;
+  hookSeconds?: number;
+  closingSeconds?: number;
   scenes: GlossyScene[];
   closingLines: string[];
   closingSub: string;
@@ -40,17 +44,18 @@ export function sceneText(scene: GlossyScene) {
 }
 
 export function glossySceneFrames(scene: GlossyScene) {
+  if (scene.seconds) return Math.round(scene.seconds * FPS);
   return Math.round(Math.max(SCENE_MIN_SECONDS, 1.5 + sceneText(scene).length / CHARS_PER_SECOND) * FPS);
 }
 
-export function buildGlossyTimeline(props: Pick<GlossyReelProps, "scenes">) {
-  const hook = { from: 0, durationInFrames: Math.round(HOOK_SECONDS * FPS) };
+export function buildGlossyTimeline(props: Pick<GlossyReelProps, "scenes" | "hookSeconds" | "closingSeconds">) {
+  const hook = { from: 0, durationInFrames: Math.round((props.hookSeconds ?? HOOK_SECONDS) * FPS) };
   let cursor = hook.durationInFrames;
   const scenes = props.scenes.map(scene => {
     const slot = { from: cursor, durationInFrames: glossySceneFrames(scene) };
     cursor += slot.durationInFrames;
     return slot;
   });
-  const closing = { from: cursor, durationInFrames: Math.round(CLOSING_SECONDS * FPS) };
+  const closing = { from: cursor, durationInFrames: Math.round((props.closingSeconds ?? CLOSING_SECONDS) * FPS) };
   return { hook, scenes, closing, durationInFrames: cursor + closing.durationInFrames };
 }
