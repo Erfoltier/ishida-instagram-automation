@@ -2,7 +2,7 @@ import { copyFile, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/pro
 import os from "node:os";
 import path from "node:path";
 import { renderPreparedReel } from "../src/render/renderReel";
-import { carouselTimeline, type CarouselReelProps } from "../remotion/CarouselReel";
+import { carouselTimeline, type CarouselReelProps } from "../remotion/carouselTiming";
 
 /**
  * Renders reels/<reelId>/layers (from scripts/carousel-reel/prepare.py) with the

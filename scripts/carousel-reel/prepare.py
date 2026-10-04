@@ -3,8 +3,11 @@ Turns finished carousel images (text already designed into the picture) into
 layers for remotion/CarouselReel.tsx, so the reel keeps the exact fonts/colours
 of the carousel while the text animates. Each slide is split into:
 
-  * plate-N.png    : the slide with the animated text AND its highlighter /
-                     underline strokes removed (OpenCV inpaint)
+  * plate-N.png    : an EMPTY background — the slide's cream paper with every
+                     element (text, highlighters, frames, icons, photos) removed;
+                     only the footer line stays, so each slide is drawn from scratch
+  * N-K-decor.png  : the frames / icons / photos that belong to text block K
+                     (assigned to the nearest block), drawn just before its text
   * N-K-mark.png   : the highlighter / underline strokes belonging to text block K
                      (pastel yellow/orange/blue near the text), drawn in after the text
   * N-K.png        : the text of block K only, on a transparent background
@@ -131,13 +134,92 @@ def main():
         grow = lambda m, k: cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k)))
         # Background behind the text only (highlights kept): used to pull the text out.
         under_text = cv2.inpaint(image, grow(text_mask, 7), 7, cv2.INPAINT_TELEA)
-        # Clean plate: text and highlights both removed.
-        plate = cv2.inpaint(image, grow(text_mask | mark_mask, 9), 9, cv2.INPAINT_TELEA)
+        cleaned = cv2.inpaint(image, grow(text_mask | mark_mask, 9), 9, cv2.INPAINT_TELEA)
+
+        # Paper model: a smooth quadratic colour gradient fitted to pixels that are
+        # clearly plain paper (bright, unsaturated). This is the empty background.
+        lum = cv2.cvtColor(cleaned, cv2.COLOR_BGR2GRAY)
+        sat = cv2.cvtColor(cleaned, cv2.COLOR_BGR2HSV)[..., 1]
+        yy, xx = np.mgrid[0:height, 0:width].astype(np.float32)
+        u, v = xx / width - 0.5, yy / height - 0.5
+        basis = np.stack([np.ones_like(u), u, v, u * u, v * v, u * v], axis=-1)
+        sample = (lum > 225) & (sat < 30)
+        sample[::3, ::3] &= True
+        idx = np.nonzero(sample[::4, ::4])
+        A = basis[::4, ::4][idx]
+        paper = np.zeros_like(cleaned, dtype=np.float32)
+        for ch in range(3):
+            coef, *_ = np.linalg.lstsq(A, cleaned[::4, ::4, ch][idx].astype(np.float32), rcond=None)
+            paper[..., ch] = basis @ coef
+        paper = np.clip(paper, 0, 255)
+
+        # Everything that is not paper: off the paper colour, saturated or edged,
+        # closed into shapes (small enclosed holes such as tablet faces are filled,
+        # big ones such as the inside of a note frame stay paper).
+        off = np.abs(cleaned.astype(np.float32) - paper).max(axis=2)
+        edges = cv2.Canny(lum, 40, 110)
+        fg = ((off > 22) | (sat > 40) | (edges > 0)).astype(np.uint8) * 255
+        fg = cv2.morphologyEx(fg, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11)))
+        contours, hierarchy = cv2.findContours(fg, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+        if hierarchy is not None:
+            for c, info in zip(contours, hierarchy[0]):
+                if info[3] >= 0 and cv2.contourArea(c) < 20000:
+                    cv2.drawContours(fg, [c], -1, 255, -1)
+        # Pale objects that barely differ from the paper (white tablets) can be
+        # pinned with `decorRects`: inside them a much lower threshold is used.
+        for r in slide.get("decorRects", []):
+            x0, y0, x1, y1 = clip_rect(r, width, height)
+            weak = ((off[y0:y1, x0:x1] > 7) | (edges[y0:y1, x0:x1] > 0)).astype(np.uint8) * 255
+            weak = cv2.morphologyEx(weak, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15)))
+            fg[y0:y1, x0:x1] |= weak
+        fg &= ~(text_mask | mark_mask)
+
+        # The footer (rule + clinic name) stays on every plate: its pieces are small
+        # separate shapes that start below 92% of the height.
+        static = np.zeros_like(gray)
+        count, labels, stats, _ = cv2.connectedComponentsWithStats(fg)
+        for c in range(1, count):
+            if stats[c][1] > height * 0.92:
+                static[labels == c] = 255
+        fg &= ~static
+
+        # Group the remaining elements and give each to the nearest text block.
+        count, labels, stats, _ = cv2.connectedComponentsWithStats(grow(fg, 9))
+        owner = {}
+        for c in range(1, count):
+            x, y, w, h, area = stats[c]
+            comp = (labels == c) & (fg > 0)
+            if area < 150:
+                continue
+            best, best_d = 0, 1e9
+            for k, block in enumerate(blocks):
+                bx, by, bw, bh = block["rect"]
+                dx = max(bx - (x + w), x - (bx + bw), 0)
+                dy = max(by - (y + h), y - (by + bh), 0)
+                d = (dx * dx + dy * dy) ** 0.5
+                if d < best_d:
+                    best, best_d = k, d
+            owner.setdefault(best, np.zeros_like(gray))
+            owner[best][comp] = 255
+        s_alpha = cv2.GaussianBlur(grow(static, 5).astype(np.float32) / 255, (0, 0), 1.5)[..., None]
+        plate = (paper * (1 - s_alpha) + cleaned * s_alpha).astype(np.uint8)
         cv2.imwrite(os.path.join(out_dir, f"plate-{n}.png"), plate)
+        under_text_marks = cleaned
 
         layers = []
         for k, block in enumerate(blocks, start=1):
             entry = {"anim": block.get("anim", "rise")}
+            if block.get("count"):
+                entry["count"] = block["count"]
+            decor = owner.get(k - 1)
+            if decor is not None and decor.any():
+                ys, xs = np.nonzero(decor)
+                dx0, dy0 = max(0, xs.min() - 6), max(0, ys.min() - 6)
+                dx1, dy1 = min(width, xs.max() + 7), min(height, ys.max() + 7)
+                d_alpha = cv2.GaussianBlur(grow(decor, 3)[dy0:dy1, dx0:dx1].astype(np.float32) / 255, (0, 0), 1.2)
+                dname = f"{n}-{k}-decor.png"
+                cv2.imwrite(os.path.join(out_dir, dname), np.dstack([under_text_marks[dy0:dy1, dx0:dx1], (d_alpha * 255).astype(np.uint8)]))
+                entry["decor"] = {"src": dname, "x": int(dx0), "y": int(dy0), "w": int(dx1 - dx0), "h": int(dy1 - dy0)}
             # --- text layer: alpha from how much darker each pixel is than the
             # background behind it, colour from the solid core of the strokes.
             tm = grow(block["text"], 5)

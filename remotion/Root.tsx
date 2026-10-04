@@ -1,7 +1,8 @@
 import { Composition } from "remotion";
 import { Reel } from "./Reel";
 import { ReelPop } from "./ReelPop";
-import { CAROUSEL_FPS, CarouselReel, carouselTimeline, type CarouselReelProps } from "./CarouselReel";
+import { CarouselReel } from "./CarouselReel";
+import { CAROUSEL_FPS, carouselTimeline, type CarouselReelProps } from "./carouselTiming";
 import { POP_FPS, buildPopTimeline, type ReelPopProps } from "./popTiming";
 import { REEL_FPS, REEL_HEIGHT, REEL_WIDTH, buildReelTimeline, type ReelProps } from "./timing";
 
