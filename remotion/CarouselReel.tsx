@@ -6,7 +6,9 @@ import { AbsoluteFill, Easing, Img, Sequence, interpolate, spring, staticFile, u
  * inpainted away (scripts/carousel-reel/prepare.py), and the text blocks — cut
  * from the original image — are revealed on top one after another.
  */
-export type CarouselLayer = { src: string; x: number; y: number; w: number; h: number; anim: "wipe" | "rise" | "pop" };
+type Placed = { src: string; x: number; y: number; w: number; h: number };
+/** One text block, plus its highlighter / underline strokes (drawn after the text). */
+export type CarouselLayer = Placed & { anim: "wipe" | "rise" | "pop"; mark?: Placed };
 export type CarouselSlide = { plate: string; seconds: number; layers: CarouselLayer[] };
 export type CarouselReelProps = { width: number; height: number; background: string; slides: CarouselSlide[] };
 
@@ -51,6 +53,23 @@ const Layer: React.FC<{ layer: CarouselLayer; delay: number; scale: number }> = 
   return <div style={{ ...box, opacity: p, transform: `translateY(${(1 - p) * 26}px)` }}>{img}</div>;
 };
 
+/** Time a text block needs to finish appearing, after which its highlighter is drawn. */
+const TEXT_IN: Record<CarouselLayer["anim"], number> = { wipe: 15, rise: 9, pop: 9 };
+const MARK_FRAMES = 9;
+
+/** Highlighter pen: swept in from left to right with a soft leading edge. */
+const Marker: React.FC<{ mark: Placed; delay: number; scale: number }> = ({ mark, delay, scale }) => {
+  const frame = useCurrentFrame();
+  const p = interpolate(frame - delay, [0, MARK_FRAMES], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.quad) });
+  const edge = p * 115 - 15;
+  const gradient = `linear-gradient(90deg, #000 ${edge}%, transparent ${edge + 15}%)`;
+  return (
+    <div style={{ position: "absolute", left: mark.x * scale, top: mark.y * scale, width: mark.w * scale, height: mark.h * scale, WebkitMaskImage: gradient, maskImage: gradient }}>
+      <Img src={staticFile(mark.src)} style={{ width: "100%", height: "100%", display: "block" }} />
+    </div>
+  );
+};
+
 const Slide: React.FC<{ slide: CarouselSlide; props: CarouselReelProps; durationInFrames: number; first: boolean }> = ({ slide, props, durationInFrames, first }) => {
   const frame = useCurrentFrame();
   const scale = 1080 / props.width;
@@ -66,6 +85,10 @@ const Slide: React.FC<{ slide: CarouselSlide; props: CarouselReelProps; duration
     <AbsoluteFill style={{ backgroundColor: props.background, transform: `translateX(${(1 - enter) * 1080}px)`, boxShadow: first ? undefined : "-30px 0 60px rgba(60,40,20,0.12)" }}>
       <div style={{ position: "absolute", left: 0, top: SLIDE_TOP, width: 1080, height: props.height * scale, transform: `scale(${zoom})`, transformOrigin: "50% 40%" }}>
         <Img src={staticFile(slide.plate)} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
+        {/* Highlighters sit under every text block, so they are drawn first. */}
+        {slide.layers.map((layer, i) =>
+          layer.mark ? <Marker key={layer.mark.src} mark={layer.mark} delay={start + i * gap + TEXT_IN[layer.anim]} scale={scale} /> : null
+        )}
         {slide.layers.map((layer, i) => (
           <Layer key={layer.src} layer={layer} delay={start + i * gap} scale={scale} />
         ))}
