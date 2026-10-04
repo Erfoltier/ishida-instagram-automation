@@ -9,7 +9,8 @@ import { carouselTimeline, type CarouselReelProps } from "../remotion/carouselTi
  * CarouselReel composition — a silent reel that animates a finished carousel:
  *   tsx scripts/render-carousel-reel.ts <reelId> [captionFile]
  * captionFile (optional) is a manuscript whose 【キャプション】 section becomes
- * the manifest caption; its last line is the hashtags.
+ * the manifest caption; its last line is the hashtags. Set BGM=<audio file> to
+ * add background music (e.g. from scripts/bgm/compose_relax.py); silent otherwise.
  */
 async function readCaption(captionFile: string | undefined) {
   if (!captionFile) return { caption: "", hashtags: [] as string[] };
@@ -33,6 +34,11 @@ async function main() {
     for (const file of await readdir(layersDir)) {
       if (file.endsWith(".png")) await copyFile(path.join(layersDir, file), path.join(publicDir, file));
     }
+    const bgmPath = process.env.BGM ? path.resolve(process.env.BGM) : null;
+    if (bgmPath) {
+      inputProps.bgm = `bgm${path.extname(bgmPath).toLowerCase()}`;
+      await copyFile(bgmPath, path.join(publicDir, inputProps.bgm));
+    }
     const { slots } = carouselTimeline(inputProps);
     const rendered = await renderPreparedReel({
       compositionId: "CarouselReel",
@@ -40,9 +46,9 @@ async function main() {
       stillFrames: { hook: slots[0]!, scenes: slots.slice(1, -1), closing: slots.at(-1)! },
       publicDir,
       outputDir: reelDir,
-      bgmPath: null,
+      bgmPath,
     });
-    console.log(`動画を書き出しました（${rendered.durationSeconds}秒、無音）。`);
+    console.log(`動画を書き出しました（${rendered.durationSeconds}秒、${bgmPath ? "BGMあり" : "無音"}）。`);
     const { caption, hashtags } = await readCaption(captionFile);
     const manifest = {
       reelId,

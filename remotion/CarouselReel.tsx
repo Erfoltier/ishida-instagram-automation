@@ -1,6 +1,6 @@
 import "@fontsource/yusei-magic/400.css";
 import { useEffect, useState } from "react";
-import { AbsoluteFill, Easing, Img, Sequence, continueRender, delayRender, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Audio, Easing, Img, Sequence, continueRender, delayRender, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 
 /**
  * Turns a finished carousel (text designed into the images) into a Reel while
@@ -159,9 +159,13 @@ function useCountFontReady() {
   }, [handle]);
 }
 
+const BGM_VOLUME = 0.55;
+
 export const CarouselReel: React.FC<CarouselReelProps> = props => {
-  const { slots } = carouselTimeline(props);
+  const { slots, durationInFrames } = carouselTimeline(props);
+  const { fps } = useVideoConfig();
   useCountFontReady();
+  const fade = Math.round(1.5 * fps);
   return (
     <AbsoluteFill style={{ backgroundColor: props.background }}>
       {props.slides.map((slide, i) => (
@@ -169,6 +173,12 @@ export const CarouselReel: React.FC<CarouselReelProps> = props => {
           <Slide slide={slide} props={props} durationInFrames={slots[i]!.durationInFrames} index={i} />
         </Sequence>
       ))}
+      {props.bgm && (
+        <Audio
+          src={staticFile(props.bgm)}
+          volume={f => interpolate(f, [0, fade, durationInFrames - fade, durationInFrames], [0, BGM_VOLUME, BGM_VOLUME, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}
+        />
+      )}
     </AbsoluteFill>
   );
 };

@@ -20,7 +20,10 @@ of the carousel while the text animates. Each slide is split into:
 blocks as [x, y, w, h] rectangles in source pixels (several rectangles in one
 block are merged), plus an animation kind: "wipe" (titles, written left→right),
 "rise" (body lines), "pop" (numbers / badges). `erase` rectangles are inpainted
-but not re-shown (e.g. the carousel's "1/8" page counter).
+but not re-shown (e.g. the carousel's "1/8" page counter). Optional: `static`
+rectangles per slide keep every element they touch fixed on the plate (e.g. a
+decorative header band), and a top-level `markerColors` list chooses which pastel
+families count as highlighter strokes ("warm", "blue", "pink"; default warm+blue).
 """
 import json
 import os
@@ -50,12 +53,19 @@ def clip_rect(rect, width, height, grow=0):
     return x0, y0, x1, y1
 
 
-def marker_pixels(hsv):
+def marker_pixels(hsv, families=("warm", "blue")):
     """Pastel decoration colours used for highlighter/underline strokes."""
     h, s, v = hsv[..., 0].astype(int), hsv[..., 1].astype(int), hsv[..., 2].astype(int)
-    warm = (h >= 15) & (h <= 38) & (s >= 35) & (v >= 170)
-    blue = (h >= 90) & (h <= 115) & (s >= 25) & (v >= 170)
-    return (warm | blue).astype(np.uint8) * 255
+    masks = {
+        "warm": (h >= 15) & (h <= 38) & (s >= 35) & (v >= 170),
+        "blue": (h >= 90) & (h <= 115) & (s >= 25) & (v >= 170),
+        # Bright and only lightly saturated, so skin and light-brown hair stay out.
+        "pink": ((h >= 165) | (h <= 7)) & (s >= 20) & (s <= 120) & (v >= 225),
+    }
+    out = np.zeros(h.shape, dtype=bool)
+    for family in families:
+        out |= masks[family]
+    return out.astype(np.uint8) * 255
 
 
 def rects_touch(a, b):
@@ -78,8 +88,24 @@ def main():
         height, width = image.shape[:2]
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        marks_raw = marker_pixels(hsv)
+        families = spec.get("markerColors", ["warm", "blue"])
+        marks_raw = marker_pixels(hsv, families)
+        if "pink" in families:
+            # Anti-aliased edges of reddish-brown lettering read as pale pink; drop
+            # everything right around the strokes (a real highlighter extends well
+            # beyond them, and the gaps are closed again when its layer is built).
+            halo = cv2.dilate((gray < 215).astype(np.uint8) * 255, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)))
+            marks_raw &= ~halo
         marks_all = cv2.morphologyEx(marks_raw, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)))
+        # Strokes connected to a `static` element (e.g. a pastel header band) stay on the plate.
+        if slide.get("static"):
+            m_count, m_labels = cv2.connectedComponents(marks_all)
+            for r in slide["static"]:
+                x0, y0, x1, y1 = clip_rect(r, width, height)
+                for c in np.unique(m_labels[y0:y1, x0:x1]):
+                    if c > 0:
+                        marks_all[m_labels == c] = 0
+                        marks_raw[m_labels == c] = 0
 
         text_mask = np.zeros_like(gray)
         mark_mask = np.zeros_like(gray)
@@ -259,6 +285,11 @@ def main():
         for c in range(1, count):
             if stats[c][1] > height * 0.92:
                 static[labels == c] = 255
+        for r in slide.get("static", []):
+            x0, y0, x1, y1 = clip_rect(r, width, height)
+            for c in np.unique(labels[y0:y1, x0:x1]):
+                if c > 0:
+                    static[labels == c] = 255
         fg &= ~static
 
         # Group the remaining elements and give each to the nearest text block.

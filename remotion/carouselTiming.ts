@@ -14,7 +14,14 @@ export type CarouselLayer = Placed & {
   count?: { to: number; suffix: string };
 };
 export type CarouselSlide = { plate: string; seconds: number; layers: CarouselLayer[] };
-export type CarouselReelProps = { width: number; height: number; background: string; slides: CarouselSlide[] };
+export type CarouselReelProps = {
+  width: number;
+  height: number;
+  background: string;
+  slides: CarouselSlide[];
+  /** File name inside the render's public dir, or omitted/null for a silent reel. */
+  bgm?: string | null;
+};
 
 export const CAROUSEL_FPS = 30;
 export const OVERLAP = 10;
