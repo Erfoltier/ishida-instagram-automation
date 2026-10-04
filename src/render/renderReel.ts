@@ -147,10 +147,10 @@ export async function renderPreparedReel(options: {
   });
 
   const timeline = stillFrames;
-  // Default: once the scene's entrance animation has settled. The beat-synced pop
-  // template reveals content over the whole scene, so its stills come from the end.
+  // Default: once the scene's entrance animation has settled. The newer templates (ReelPop,
+  // CarouselReel) reveal content over the whole scene, so its stills come from the end.
   const settle = (slot: { from: number; durationInFrames: number }) =>
-    compositionId === "ReelPop" ? slot.from + slot.durationInFrames - 12 : slot.from + Math.min(slot.durationInFrames - 10, 45);
+    compositionId !== "Reel" ? slot.from + slot.durationInFrames - 12 : slot.from + Math.min(slot.durationInFrames - 10, 45);
   await renderStill({ serveUrl, composition, inputProps, frame: settle(timeline.hook), output: path.join(outputDir, REEL_COVER_FILE_NAME), imageFormat: "jpeg", jpegQuality: 90, browserExecutable });
   const sceneStillFileNames: string[] = [];
   for (const [index, slot] of timeline.scenes.entries()) {

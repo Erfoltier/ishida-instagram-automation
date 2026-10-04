@@ -1,0 +1,59 @@
+{
+  "reelId": "2026-10-04-bihaku-naifuku-carousel",
+  "articleId": "MANUAL-2026-10-04-bihaku-naifuku-carousel",
+  "subject": "カルーセル画像から作成したリール",
+  "template": "carousel",
+  "hook": "",
+  "scenes": [
+    {
+      "heading": "スライド1",
+      "body": "6ブロックの文字を順に表示"
+    },
+    {
+      "heading": "スライド2",
+      "body": "12ブロックの文字を順に表示"
+    },
+    {
+      "heading": "スライド3",
+      "body": "11ブロックの文字を順に表示"
+    },
+    {
+      "heading": "スライド4",
+      "body": "7ブロックの文字を順に表示"
+    },
+    {
+      "heading": "スライド5",
+      "body": "10ブロックの文字を順に表示"
+    },
+    {
+      "heading": "スライド6",
+      "body": "12ブロックの文字を順に表示"
+    },
+    {
+      "heading": "スライド7",
+      "body": "9ブロックの文字を順に表示"
+    },
+    {
+      "heading": "スライド8",
+      "body": "5ブロックの文字を順に表示"
+    }
+  ],
+  "closing": "",
+  "caption": "",
+  "hashtags": [],
+  "complianceNotes": "カルーセル画像（院内で作成・確認済み）の文字を順に表示するだけで、文言は変更していない。",
+  "sourceUrls": [],
+  "videoFileName": "reel.mp4",
+  "coverFileName": "cover.jpg",
+  "sceneStillFileNames": [
+    "scene-01.jpg",
+    "scene-02.jpg",
+    "scene-03.jpg",
+    "scene-04.jpg",
+    "scene-05.jpg",
+    "scene-06.jpg",
+    "scene-closing.jpg"
+  ],
+  "bgmFileName": null,
+  "durationSeconds": 46.5
+}

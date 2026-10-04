@@ -1,6 +1,7 @@
 import { Composition } from "remotion";
 import { Reel } from "./Reel";
 import { ReelPop } from "./ReelPop";
+import { CAROUSEL_FPS, CarouselReel, carouselTimeline, type CarouselReelProps } from "./CarouselReel";
 import { POP_FPS, buildPopTimeline, type ReelPopProps } from "./popTiming";
 import { REEL_FPS, REEL_HEIGHT, REEL_WIDTH, buildReelTimeline, type ReelProps } from "./timing";
 
@@ -41,8 +42,20 @@ const popDefaultProps: ReelPopProps = {
   bgm: null,
 };
 
+const carouselDefaultProps: CarouselReelProps = { width: 1122, height: 1402, background: "#FEFAF1", slides: [] };
+
 export const RemotionRoot: React.FC = () => (
   <>
+  <Composition
+    id="CarouselReel"
+    component={CarouselReel}
+    fps={CAROUSEL_FPS}
+    width={REEL_WIDTH}
+    height={REEL_HEIGHT}
+    durationInFrames={30}
+    defaultProps={carouselDefaultProps}
+    calculateMetadata={({ props }) => ({ durationInFrames: Math.max(1, carouselTimeline(props).durationInFrames) })}
+  />
   <Composition
     id="ReelPop"
     component={ReelPop}
