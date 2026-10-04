@@ -91,6 +91,19 @@ def main():
             for r in block["rects"]:
                 x0, y0, x1, y1 = clip_rect(r, width, height, 4)
                 bt[y0:y1, x0:x1] = (gray[y0:y1, x0:x1] < TEXT_LUMA).astype(np.uint8) * 255
+            # Frame / bubble outlines that pass through the text box are decoration,
+            # not text: long thin lines, or big rings with almost no fill.
+            count, labels, stats, _ = cv2.connectedComponentsWithStats(bt)
+            heights = [stats[c][3] for c in range(1, count) if stats[c][4] > 30]
+            glyph = float(np.median(heights)) if heights else 40.0
+            for c in range(1, count):
+                x, y, w, h, area = stats[c]
+                long_side, short_side = max(w, h), max(1, min(w, h))
+                ring = area / float(w * h) < 0.08 and long_side > 2 * glyph
+                # Lines are much longer than a character ("I" and "ー" are not).
+                line = long_side > 6 * short_side and long_side > 1.8 * glyph and short_side < 16
+                if ring or line:
+                    bt[labels == c] = 0
 
             # Highlighter / underline strokes: pastel components that touch this block
             # (thin outlines such as card borders are skipped by their fill ratio).
@@ -184,7 +197,7 @@ def main():
         fg &= ~static
 
         # Group the remaining elements and give each to the nearest text block.
-        count, labels, stats, _ = cv2.connectedComponentsWithStats(grow(fg, 9))
+        count, labels, stats, _ = cv2.connectedComponentsWithStats(grow(fg, 25))
         owner = {}
         for c in range(1, count):
             x, y, w, h, area = stats[c]

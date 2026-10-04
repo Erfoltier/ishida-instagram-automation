@@ -3,7 +3,7 @@
  "slides": [
   {
    "image": "s1.jpg",
-   "seconds": 4.5,
+   "seconds": 6,
    "blocks": [
     {
      "rects": [
@@ -89,7 +89,7 @@
   },
   {
    "image": "s2.jpg",
-   "seconds": 6.5,
+   "seconds": 8.5,
    "blocks": [
     {
      "rects": [
@@ -243,7 +243,7 @@
   },
   {
    "image": "s3.jpg",
-   "seconds": 6.5,
+   "seconds": 8.5,
    "blocks": [
     {
      "rects": [
@@ -378,7 +378,7 @@
   },
   {
    "image": "s4.jpg",
-   "seconds": 5.5,
+   "seconds": 7,
    "blocks": [
     {
      "rects": [
@@ -481,7 +481,7 @@
   },
   {
    "image": "s5.jpg",
-   "seconds": 6,
+   "seconds": 7.5,
    "blocks": [
     {
      "rects": [
@@ -609,7 +609,7 @@
   },
   {
    "image": "s6.jpg",
-   "seconds": 7,
+   "seconds": 9,
    "blocks": [
     {
      "rects": [
@@ -767,7 +767,7 @@
   },
   {
    "image": "s7.jpg",
-   "seconds": 5.5,
+   "seconds": 7,
    "blocks": [
     {
      "rects": [
@@ -880,7 +880,7 @@
   },
   {
    "image": "s8.jpg",
-   "seconds": 5,
+   "seconds": 6.5,
    "blocks": [
     {
      "rects": [

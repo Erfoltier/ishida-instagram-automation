@@ -127,7 +127,7 @@ const Slide: React.FC<{ slide: CarouselSlide; props: CarouselReelProps; duration
   // The opening frame must already carry the hook, so slide 1's title is fully
   // written at frame 0 and the rest follows quickly.
   const start = first ? -16 : OVERLAP + 2;
-  const gap = first ? 7 : n > 1 ? Math.min(11, (durationInFrames * 0.55 - start) / (n - 1)) : 0;
+  const gap = first ? 7 : n > 1 ? Math.min(16, (durationInFrames * 0.55 - start) / (n - 1)) : 0;
   return (
     <AbsoluteFill style={{ backgroundColor: props.background, transform: `translateX(${(1 - enter) * 1080}px)`, boxShadow: first ? undefined : "-30px 0 60px rgba(60,40,20,0.12)" }}>
       <div style={{ position: "absolute", left: 0, top: SLIDE_TOP, width: 1080, height: props.height * scale, transform: `scale(${zoom})`, transformOrigin: "50% 40%" }}>
