@@ -85,12 +85,77 @@ def main():
         mark_mask = np.zeros_like(gray)
         claimed = np.zeros_like(gray)
         blocks = []
+        # Glyph ownership. Detected text boxes are axis-aligned, so on tilted text
+        # (e.g. a memo written at an angle) a horizontal box edge would slice through
+        # characters of the neighbouring line. Instead every dark glyph (connected
+        # stroke group) goes WHOLE to the block whose box holds its centre.
+        union_mask = np.zeros_like(gray)
         for block in slide["blocks"]:
-            rect = union(block["rects"])
-            bt = np.zeros_like(gray)
             for r in block["rects"]:
                 x0, y0, x1, y1 = clip_rect(r, width, height, 4)
-                bt[y0:y1, x0:x1] = (gray[y0:y1, x0:x1] < TEXT_LUMA).astype(np.uint8) * 255
+                union_mask[y0:y1, x0:x1] = 255
+        dark = ((gray < TEXT_LUMA) & (union_mask > 0)).astype(np.uint8) * 255
+        g_count, g_labels, g_stats, g_cent = cv2.connectedComponentsWithStats(dark)
+        glyph_owner = np.full(g_count, -1)
+        # Small detached parts (dakuten, dots, a radical's top stroke) can sit inside
+        # the neighbouring line's box on tilted text, so they follow the nearest
+        # full-size glyph instead of the box.
+        sizes = [max(g_stats[c][2], g_stats[c][3]) for c in range(1, g_count) if g_stats[c][4] > 20]
+        glyph_size = float(np.median(sizes)) if sizes else 30.0
+        small = [c for c in range(1, g_count) if max(g_stats[c][2], g_stats[c][3]) < 0.45 * glyph_size]
+        for c in range(1, g_count):
+            if c in small:
+                continue
+            cx, cy = g_cent[c]
+            best, best_d = -1, 1e9
+            for k, block in enumerate(slide["blocks"]):
+                for r in block["rects"]:
+                    dx = max(r[0] - cx, cx - (r[0] + r[2]), 0)
+                    dy = max(r[1] - cy, cy - (r[1] + r[3]), 0)
+                    d = dx * dx + dy * dy
+                    if d < best_d:
+                        best, best_d = k, d
+            glyph_owner[c] = best
+        big = [c for c in range(1, g_count) if c not in small]
+        # Tilted lines: fit each block's baseline through its glyph centres and move
+        # every glyph to the block whose (tilted) line passes closest, among blocks
+        # whose box is nearby. A few rounds settle the assignment.
+        for _ in range(3):
+            fits = {}
+            for k in range(len(slide["blocks"])):
+                members = [c for c in big if glyph_owner[c] == k]
+                if len(members) >= 3:
+                    xs_ = np.array([g_cent[c][0] for c in members])
+                    ys_ = np.array([g_cent[c][1] for c in members])
+                    if np.ptp(xs_) > glyph_size:
+                        slope, icpt = np.polyfit(xs_, ys_, 1)
+                        fits[k] = (float(np.clip(slope, -0.35, 0.35)), float(icpt))
+                        continue
+                if members:
+                    fits[k] = (0.0, float(np.mean([g_cent[c][1] for c in members])))
+            for c in big:
+                cx, cy = g_cent[c]
+                best, best_d = glyph_owner[c], 1e9
+                for k, (slope, icpt) in fits.items():
+                    near = any(
+                        r[0] - 60 <= cx <= r[0] + r[2] + 60 and r[1] - 60 <= cy <= r[1] + r[3] + 60
+                        for r in slide["blocks"][k]["rects"]
+                    )
+                    if not near:
+                        continue
+                    d = abs(cy - (slope * cx + icpt))
+                    if d < best_d:
+                        best, best_d = k, d
+                glyph_owner[c] = best
+        for c in small:
+            if not big:
+                break
+            d = [((g_cent[c][0] - g_cent[b][0]) ** 2 + (g_cent[c][1] - g_cent[b][1]) ** 2, b) for b in big]
+            glyph_owner[c] = glyph_owner[min(d)[1]]
+
+        for block_index, block in enumerate(slide["blocks"]):
+            rect = union(block["rects"])
+            bt = (np.isin(g_labels, np.nonzero(glyph_owner == block_index)[0]) & (dark > 0)).astype(np.uint8) * 255
             # Frame / bubble outlines that pass through the text box are decoration,
             # not text: long thin lines, or big rings with almost no fill.
             count, labels, stats, _ = cv2.connectedComponentsWithStats(bt)
