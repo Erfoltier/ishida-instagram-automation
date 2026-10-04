@@ -11,12 +11,15 @@
     "typecheck": "tsc --noEmit",
     "generate-reel": "tsx scripts/generate-reel.ts",
     "publish-reel": "tsx scripts/publish-approved-reel.ts",
-    "studio": "remotion studio remotion/index.ts"
+    "studio": "remotion studio remotion/index.ts",
+    "render-manual-reel": "tsx scripts/render-manual-reel.ts",
+    "render-carousel-reel": "tsx scripts/render-carousel-reel.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
     "@fontsource/noto-sans-jp": "^5.3.0",
     "@fontsource/shippori-mincho": "^5.3.0",
+    "@fontsource/yusei-magic": "^5.3.0",
     "@remotion/bundler": "4.0.532",
     "@remotion/cli": "4.0.532",
     "@remotion/renderer": "4.0.532",

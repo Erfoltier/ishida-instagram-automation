@@ -7,6 +7,8 @@ description: Remotion で Instagram リール動画（1080x1920）を作成・�
 
 このリポジトリでは、カルーセル投稿とは別に Remotion でリール動画を生成し、GitHub Issue での承認後に Instagram Graph API でリールとして公開する。
 
+**リールを新しく作る・デザインや流れを変えるときは、先に [reel-guidelines.md](reel-guidelines.md)（このアカウントのリール制作ベースルール）を読み、それに沿って作ること。**
+
 ## ファイル構成
 
 | 場所 | 役割 |
@@ -19,6 +21,10 @@ description: Remotion で Instagram リール動画（1080x1920）を作成・�
 | `scripts/generate-reel.ts` | テーマ選定 → 台本生成 → レンダリング → `reels/<reelId>/` に保存 |
 | `scripts/create-reel-issue.ts` | 承認 Issue（ラベル `instagram-reel`）を作成する |
 | `scripts/publish-approved-reel.ts` | `approve` コメントでリールを公開し、`data/reel-history.json` を更新する |
+| `remotion/CarouselReel.tsx` / `scripts/carousel-reel/prepare.py` / `scripts/render-carousel-reel.ts` | 完成済みのカルーセル画像を、フォント・色調を保ったまま文字が動く無音リールにする（文字・ハイライト・背景を分離して重ねる） |
+| `remotion/ReelPop.tsx` / `remotion/popTiming.ts` | 拍同期のテロップ型テンプレート（id: `ReelPop`）。112.5BPM＝1拍16フレームで、場面転換を小節頭に合わせる |
+| `scripts/render-manual-reel.ts` | 手書きの台本 `reels/<reelId>/script.json` から書き出す（`template: "pop"` で ReelPop、省略時は従来の Reel） |
+| `scripts/music/chill-house-bgm.py` | 著作権フリーの自作BGM（チルハウス、112.5BPM）を numpy で合成する。`python3 scripts/music/chill-house-bgm.py out.wav 16` |
 | `assets/bgm/` | BGM（著作権フリーの音源）を置く場所。空なら無音で書き出し、Issue に警告を出す |
 
 ## ルール
