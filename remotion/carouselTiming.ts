@@ -14,11 +14,31 @@ export type CarouselLayer = Placed & {
   count?: { to: number; suffix: string };
 };
 export type CarouselSlide = { plate: string; seconds: number; layers: CarouselLayer[] };
+/** Look of the count-up digits, chosen to match the carousel's own lettering. */
+export type CountStyle = {
+  /** CSS font-family; the face must be bundled in CarouselReel.tsx. */
+  fontFamily: string;
+  color?: string;
+  /** Forward slant in degrees, for slanted handwriting. */
+  skewDeg?: number;
+  /** Extra stroke to match a heavier pen. */
+  strokePx?: number;
+  /** Font size as a fraction of the layer height (default 0.82). */
+  sizeRatio?: number;
+  /** Size of the suffix (e.g. "人", "mg") relative to the digits (default 0.62). */
+  suffixScale?: number;
+  /** Horizontal squeeze for narrow handwriting (default 1). */
+  widthScale?: number;
+  /** "left" keeps the digits where the artwork's number starts (default "center"). */
+  align?: "center" | "left";
+};
+
 export type CarouselReelProps = {
   width: number;
   height: number;
   background: string;
   slides: CarouselSlide[];
+  countStyle?: CountStyle;
   /** File name inside the render's public dir, or omitted/null for a silent reel. */
   bgm?: string | null;
 };

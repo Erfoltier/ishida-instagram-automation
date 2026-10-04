@@ -1,4 +1,5 @@
 import "@fontsource/yusei-magic/400.css";
+import "@fontsource/zen-kurenaido/400.css";
 import { useEffect, useState } from "react";
 import { AbsoluteFill, Audio, Easing, Img, Sequence, continueRender, delayRender, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 
@@ -8,7 +9,7 @@ import { AbsoluteFill, Audio, Easing, Img, Sequence, continueRender, delayRender
  * inpainted away (scripts/carousel-reel/prepare.py), and the text blocks — cut
  * from the original image — are revealed on top one after another.
  */
-import { CAROUSEL_FPS, OVERLAP, carouselTimeline, type CarouselLayer, type CarouselReelProps, type CarouselSlide, type Placed } from "./carouselTiming";
+import { CAROUSEL_FPS, OVERLAP, carouselTimeline, type CarouselLayer, type CarouselReelProps, type CarouselSlide, type CountStyle, type Placed } from "./carouselTiming";
 
 export { CAROUSEL_FPS, carouselTimeline };
 export type { CarouselReelProps };
@@ -45,9 +46,18 @@ const Layer: React.FC<{ layer: CarouselLayer; delay: number; scale: number }> = 
 const TEXT_IN: Record<CarouselLayer["anim"], number> = { wipe: 15, rise: 9, pop: 9 };
 const COUNT_FRAMES = 30;
 const DECOR_LEAD = 7;
-// Handwritten marker face close to the carousel's lettering, used while counting.
-const COUNT_FONT = "'Yusei Magic', 'Noto Sans JP', sans-serif";
-const INK = "#4A2D1E";
+// Default count-up look (handwritten marker face); a reel can override it with
+// `countStyle` to match its own carousel lettering.
+const DEFAULT_COUNT_STYLE: Required<CountStyle> = {
+  fontFamily: "'Yusei Magic', 'Noto Sans JP', sans-serif",
+  color: "#4A2D1E",
+  skewDeg: 0,
+  strokePx: 0,
+  sizeRatio: 0.82,
+  suffixScale: 0.62,
+  widthScale: 1,
+  align: "center",
+};
 
 /** Frames, icons and photos: traced in diagonally, settling from a slight zoom. */
 const Decor: React.FC<{ decor: Placed; delay: number; scale: number }> = ({ decor, delay, scale }) => {
@@ -63,7 +73,8 @@ const Decor: React.FC<{ decor: Placed; delay: number; scale: number }> = ({ deco
 };
 
 /** Rolls the number up in a matching handwritten face, then swaps to the original artwork with a pop. */
-const CountLayer: React.FC<{ layer: CarouselLayer; delay: number; scale: number }> = ({ layer, delay, scale }) => {
+const CountLayer: React.FC<{ layer: CarouselLayer; delay: number; scale: number; countStyle?: CountStyle }> = ({ layer, delay, scale, countStyle }) => {
+  const style = { ...DEFAULT_COUNT_STYLE, ...countStyle };
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const t = frame - delay;
@@ -74,9 +85,26 @@ const CountLayer: React.FC<{ layer: CarouselLayer; delay: number; scale: number 
   if (t < 0) return null;
   if (t < COUNT_FRAMES) {
     return (
-      <div style={{ ...box, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: COUNT_FONT, fontSize: layer.h * scale * 0.82, lineHeight: 1, color: INK, letterSpacing: -2, whiteSpace: "nowrap" }}>
+      <div
+        style={{
+          ...box,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: style.align === "left" ? "flex-start" : "center",
+          paddingLeft: style.align === "left" ? 8 * scale : undefined,
+          fontFamily: style.fontFamily,
+          fontSize: layer.h * scale * style.sizeRatio,
+          lineHeight: 1,
+          color: style.color,
+          WebkitTextStroke: style.strokePx ? `${style.strokePx * scale}px ${style.color}` : undefined,
+          transform: `skewX(${-style.skewDeg}deg) scaleX(${style.widthScale})`,
+          transformOrigin: style.align === "left" ? "0% 50%" : "50% 50%",
+          letterSpacing: -2,
+          whiteSpace: "nowrap",
+        }}
+      >
         {Math.round(value)}
-        <span style={{ fontSize: "0.62em", marginLeft: 6 }}>{count.suffix}</span>
+        <span style={{ fontSize: `${style.suffixScale}em`, marginLeft: 6 }}>{count.suffix}</span>
       </div>
     );
   }
@@ -140,7 +168,7 @@ const Slide: React.FC<{ slide: CarouselSlide; props: CarouselReelProps; duration
           layer.mark ? <Marker key={layer.mark.src} mark={layer.mark} delay={start + i * gap + (layer.count ? COUNT_FRAMES + 4 : TEXT_IN[layer.anim])} scale={scale} /> : null
         )}
         {slide.layers.map((layer, i) => (
-          layer.count ? <CountLayer key={layer.src} layer={layer} delay={start + i * gap} scale={scale} /> : <Layer key={layer.src} layer={layer} delay={start + i * gap} scale={scale} />
+          layer.count ? <CountLayer key={layer.src} layer={layer} delay={start + i * gap} scale={scale} countStyle={props.countStyle} /> : <Layer key={layer.src} layer={layer} delay={start + i * gap} scale={scale} />
         ))}
       </div>
       <Progress index={index} total={props.slides.length} durationInFrames={durationInFrames} />
@@ -152,8 +180,7 @@ const Slide: React.FC<{ slide: CarouselSlide; props: CarouselReelProps; duration
 function useCountFontReady() {
   const [handle] = useState(() => delayRender("Loading count-up font"));
   useEffect(() => {
-    document.fonts
-      .load("400 40px 'Yusei Magic'", "0123456789mg")
+    Promise.all(["400 40px 'Yusei Magic'", "400 40px 'Zen Kurenaido'"].map(face => document.fonts.load(face, "0123456789mg人回")))
       .then(() => continueRender(handle))
       .catch(() => continueRender(handle));
   }, [handle]);

@@ -23,6 +23,14 @@
     },
     {
       "heading": "スライド5",
+      "body": "7ブロックの文字を順に表示"
+    },
+    {
+      "heading": "スライド6",
+      "body": "7ブロックの文字を順に表示"
+    },
+    {
+      "heading": "スライド7",
       "body": "6ブロックの文字を順に表示"
     }
   ],
@@ -37,8 +45,10 @@
     "scene-01.jpg",
     "scene-02.jpg",
     "scene-03.jpg",
+    "scene-04.jpg",
+    "scene-05.jpg",
     "scene-closing.jpg"
   ],
   "bgmFileName": "bgm-relax.wav",
-  "durationSeconds": 26.5
+  "durationSeconds": 35.5
 }

@@ -5,7 +5,7 @@
   "slides": [
     {
       "plate": "plate-1.png",
-      "seconds": 4.5,
+      "seconds": 4,
       "layers": [
         {
           "anim": "wipe",
@@ -57,7 +57,7 @@
     },
     {
       "plate": "plate-2.png",
-      "seconds": 5.5,
+      "seconds": 5,
       "layers": [
         {
           "anim": "wipe",
@@ -118,7 +118,7 @@
     },
     {
       "plate": "plate-3.png",
-      "seconds": 5.5,
+      "seconds": 5,
       "layers": [
         {
           "anim": "wipe",
@@ -146,7 +146,7 @@
           "anim": "pop",
           "count": {
             "to": 561,
-            "suffix": "\u4eba"
+            "suffix": "人を"
           },
           "decor": {
             "src": "3-2-decor.png",
@@ -226,7 +226,7 @@
     },
     {
       "plate": "plate-4.png",
-      "seconds": 6,
+      "seconds": 5.5,
       "layers": [
         {
           "anim": "wipe",
@@ -322,11 +322,247 @@
     },
     {
       "plate": "plate-5.png",
-      "seconds": 5,
+      "seconds": 5.5,
       "layers": [
         {
           "anim": "wipe",
+          "decor": {
+            "src": "5-1-decor.png",
+            "x": 641,
+            "y": 148,
+            "w": 23,
+            "h": 21
+          },
           "src": "5-1.png",
+          "x": 338,
+          "y": 148,
+          "w": 488,
+          "h": 146
+        },
+        {
+          "anim": "wipe",
+          "decor": {
+            "src": "5-2-decor.png",
+            "x": 85,
+            "y": 348,
+            "w": 975,
+            "h": 47
+          },
+          "src": "5-2.png",
+          "x": 57,
+          "y": 240,
+          "w": 1012,
+          "h": 148,
+          "mark": {
+            "src": "5-2-mark.png",
+            "x": 100,
+            "y": 352,
+            "w": 939,
+            "h": 36
+          }
+        },
+        {
+          "anim": "rise",
+          "decor": {
+            "src": "5-3-decor.png",
+            "x": 74,
+            "y": 428,
+            "w": 977,
+            "h": 101
+          },
+          "src": "5-3.png",
+          "x": 203,
+          "y": 420,
+          "w": 818,
+          "h": 86
+        },
+        {
+          "anim": "rise",
+          "decor": {
+            "src": "5-4-decor.png",
+            "x": 108,
+            "y": 555,
+            "w": 77,
+            "h": 77
+          },
+          "src": "5-4.png",
+          "x": 201,
+          "y": 527,
+          "w": 695,
+          "h": 85
+        },
+        {
+          "anim": "rise",
+          "src": "5-5.png",
+          "x": 209,
+          "y": 597,
+          "w": 712,
+          "h": 84
+        },
+        {
+          "anim": "rise",
+          "decor": {
+            "src": "5-6-decor.png",
+            "x": 73,
+            "y": 684,
+            "w": 979,
+            "h": 213
+          },
+          "src": "5-6.png",
+          "x": 202,
+          "y": 703,
+          "w": 468,
+          "h": 85
+        },
+        {
+          "anim": "rise",
+          "decor": {
+            "src": "5-7-decor.png",
+            "x": 104,
+            "y": 882,
+            "w": 1018,
+            "h": 447
+          },
+          "src": "5-7.png",
+          "x": 200,
+          "y": 814,
+          "w": 845,
+          "h": 91
+        }
+      ]
+    },
+    {
+      "plate": "plate-6.png",
+      "seconds": 6,
+      "layers": [
+        {
+          "anim": "wipe",
+          "decor": {
+            "src": "6-1-decor.png",
+            "x": 403,
+            "y": 283,
+            "w": 99,
+            "h": 26
+          },
+          "src": "6-1.png",
+          "x": 114,
+          "y": 156,
+          "w": 898,
+          "h": 177,
+          "mark": {
+            "src": "6-1-mark.png",
+            "x": 572,
+            "y": 282,
+            "w": 280,
+            "h": 27
+          }
+        },
+        {
+          "anim": "wipe",
+          "decor": {
+            "src": "6-2-decor.png",
+            "x": 43,
+            "y": 400,
+            "w": 1013,
+            "h": 522
+          },
+          "src": "6-2.png",
+          "x": 224,
+          "y": 312,
+          "w": 671,
+          "h": 161
+        },
+        {
+          "anim": "rise",
+          "decor": {
+            "src": "6-3-decor.png",
+            "x": 1062,
+            "y": 503,
+            "w": 14,
+            "h": 89
+          },
+          "src": "6-3.png",
+          "x": 187,
+          "y": 488,
+          "w": 759,
+          "h": 92
+        },
+        {
+          "anim": "rise",
+          "src": "6-4.png",
+          "x": 331,
+          "y": 560,
+          "w": 471,
+          "h": 86
+        },
+        {
+          "anim": "rise",
+          "src": "6-5.png",
+          "x": 191,
+          "y": 644,
+          "w": 745,
+          "h": 90,
+          "mark": {
+            "src": "6-5-mark.png",
+            "x": 202,
+            "y": 653,
+            "w": 715,
+            "h": 80
+          }
+        },
+        {
+          "anim": "rise",
+          "decor": {
+            "src": "6-6-decor.png",
+            "x": 618,
+            "y": 746,
+            "w": 13,
+            "h": 13
+          },
+          "src": "6-6.png",
+          "x": 145,
+          "y": 719,
+          "w": 839,
+          "h": 93,
+          "mark": {
+            "src": "6-6-mark.png",
+            "x": 200,
+            "y": 731,
+            "w": 780,
+            "h": 83
+          }
+        },
+        {
+          "anim": "rise",
+          "decor": {
+            "src": "6-7-decor.png",
+            "x": 33,
+            "y": 761,
+            "w": 1054,
+            "h": 555
+          },
+          "src": "6-7.png",
+          "x": 91,
+          "y": 800,
+          "w": 942,
+          "h": 92,
+          "mark": {
+            "src": "6-7-mark.png",
+            "x": 108,
+            "y": 812,
+            "w": 859,
+            "h": 64
+          }
+        }
+      ]
+    },
+    {
+      "plate": "plate-7.png",
+      "seconds": 4.5,
+      "layers": [
+        {
+          "anim": "wipe",
+          "src": "7-1.png",
           "x": 167,
           "y": 163,
           "w": 763,
@@ -334,7 +570,7 @@
         },
         {
           "anim": "wipe",
-          "src": "5-2.png",
+          "src": "7-2.png",
           "x": 72,
           "y": 298,
           "w": 1006,
@@ -342,7 +578,7 @@
         },
         {
           "anim": "rise",
-          "src": "5-3.png",
+          "src": "7-3.png",
           "x": 189,
           "y": 500,
           "w": 751,
@@ -350,7 +586,7 @@
         },
         {
           "anim": "rise",
-          "src": "5-4.png",
+          "src": "7-4.png",
           "x": 156,
           "y": 586,
           "w": 827,
@@ -358,7 +594,7 @@
         },
         {
           "anim": "rise",
-          "src": "5-5.png",
+          "src": "7-5.png",
           "x": 258,
           "y": 667,
           "w": 611,
@@ -367,13 +603,13 @@
         {
           "anim": "rise",
           "decor": {
-            "src": "5-6-decor.png",
+            "src": "7-6-decor.png",
             "x": 100,
             "y": 833,
             "w": 1003,
             "h": 480
           },
-          "src": "5-6.png",
+          "src": "7-6.png",
           "x": 255,
           "y": 752,
           "w": 626,
@@ -381,5 +617,15 @@
         }
       ]
     }
-  ]
+  ],
+  "countStyle": {
+    "fontFamily": "'Zen Kurenaido', 'Noto Sans JP', sans-serif",
+    "color": "#331711",
+    "skewDeg": 14,
+    "strokePx": 1.5,
+    "sizeRatio": 0.92,
+    "suffixScale": 0.92,
+    "align": "left",
+    "widthScale": 0.84
+  }
 }

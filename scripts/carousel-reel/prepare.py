@@ -22,8 +22,10 @@ block are merged), plus an animation kind: "wipe" (titles, written left→right)
 "rise" (body lines), "pop" (numbers / badges). `erase` rectangles are inpainted
 but not re-shown (e.g. the carousel's "1/8" page counter). Optional: `static`
 rectangles per slide keep every element they touch fixed on the plate (e.g. a
-decorative header band), and a top-level `markerColors` list chooses which pastel
-families count as highlighter strokes ("warm", "blue", "pink"; default warm+blue).
+decorative header band), a top-level `markerColors` list chooses which pastel
+families count as highlighter strokes ("warm", "blue", "pink"; default warm+blue),
+and a top-level `countStyle` (fontFamily / color / skewDeg / strokePx) is passed
+through so count-up digits match the carousel's lettering.
 """
 import json
 import os
@@ -363,7 +365,10 @@ def main():
             layers.append(entry)
         slides_out.append({"plate": f"plate-{n}.png", "seconds": slide["seconds"], "layers": layers})
 
-    json.dump({"width": width, "height": height, "background": spec.get("background", "#FEFAF1"), "slides": slides_out}, open(os.path.join(out_dir, "layers.json"), "w"), indent=2)
+    out = {"width": width, "height": height, "background": spec.get("background", "#FEFAF1"), "slides": slides_out}
+    if spec.get("countStyle"):
+        out["countStyle"] = spec["countStyle"]
+    json.dump(out, open(os.path.join(out_dir, "layers.json"), "w"), indent=2, ensure_ascii=False)
     print(f"{len(slides_out)} slides -> {out_dir}")
 
 

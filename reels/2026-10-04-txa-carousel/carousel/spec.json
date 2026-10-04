@@ -6,7 +6,7 @@
  "slides": [
   {
    "image": "s1.jpg",
-   "seconds": 4.5,
+   "seconds": 4,
    "blocks": [
     {
      "rects": [
@@ -84,7 +84,7 @@
   },
   {
    "image": "s2.jpg",
-   "seconds": 5.5,
+   "seconds": 5,
    "blocks": [
     {
      "rects": [
@@ -172,7 +172,7 @@
   },
   {
    "image": "s3.jpg",
-   "seconds": 5.5,
+   "seconds": 5,
    "blocks": [
     {
      "rects": [
@@ -197,7 +197,7 @@
      "anim": "pop",
      "count": {
       "to": 561,
-      "suffix": "人"
+      "suffix": "人を"
      }
     },
     {
@@ -275,7 +275,7 @@
   },
   {
    "image": "s4.jpg",
-   "seconds": 6,
+   "seconds": 5.5,
    "blocks": [
     {
      "rects": [
@@ -362,8 +362,206 @@
    ]
   },
   {
+   "image": "s5.jpg",
+   "blocks": [
+    {
+     "rects": [
+      [
+       344,
+       166,
+       459,
+       88
+      ]
+     ],
+     "anim": "wipe"
+    },
+    {
+     "rects": [
+      [
+       63,
+       256,
+       1000,
+       116
+      ]
+     ],
+     "anim": "wipe"
+    },
+    {
+     "rects": [
+      [
+       209,
+       434,
+       805,
+       62
+      ]
+     ],
+     "anim": "rise"
+    },
+    {
+     "rects": [
+      [
+       207,
+       542,
+       708,
+       59
+      ]
+     ],
+     "anim": "rise"
+    },
+    {
+     "rects": [
+      [
+       216,
+       609,
+       699,
+       61
+      ]
+     ],
+     "anim": "rise"
+    },
+    {
+     "rects": [
+      [
+       209,
+       714,
+       455,
+       64
+      ]
+     ],
+     "anim": "rise"
+    },
+    {
+     "rects": [
+      [
+       206,
+       826,
+       833,
+       62
+      ]
+     ],
+     "anim": "rise"
+    }
+   ],
+   "erase": [
+    [
+     980,
+     1310,
+     125,
+     80
+    ]
+   ],
+   "static": [
+    [
+     0,
+     0,
+     1122,
+     140
+    ]
+   ],
+   "seconds": 5.5
+  },
+  {
+   "image": "s6.jpg",
+   "blocks": [
+    {
+     "rects": [
+      [
+       120,
+       173,
+       885,
+       143
+      ]
+     ],
+     "anim": "wipe"
+    },
+    {
+     "rects": [
+      [
+       230,
+       330,
+       659,
+       126
+      ]
+     ],
+     "anim": "wipe"
+    },
+    {
+     "rects": [
+      [
+       193,
+       503,
+       747,
+       63
+      ]
+     ],
+     "anim": "rise"
+    },
+    {
+     "rects": [
+      [
+       337,
+       572,
+       458,
+       58
+      ]
+     ],
+     "anim": "rise"
+    },
+    {
+     "rects": [
+      [
+       198,
+       659,
+       732,
+       62
+      ]
+     ],
+     "anim": "rise"
+    },
+    {
+     "rects": [
+      [
+       152,
+       737,
+       826,
+       64
+      ]
+     ],
+     "anim": "rise"
+    },
+    {
+     "rects": [
+      [
+       97,
+       814,
+       930,
+       65
+      ]
+     ],
+     "anim": "rise"
+    }
+   ],
+   "erase": [
+    [
+     980,
+     1310,
+     125,
+     80
+    ]
+   ],
+   "static": [
+    [
+     0,
+     0,
+     1122,
+     140
+    ]
+   ],
+   "seconds": 6
+  },
+  {
    "image": "s7.jpg",
-   "seconds": 5,
+   "seconds": 4.5,
    "blocks": [
     {
      "rects": [
@@ -449,5 +647,15 @@
     ]
    ]
   }
- ]
+ ],
+ "countStyle": {
+  "fontFamily": "'Zen Kurenaido', 'Noto Sans JP', sans-serif",
+  "color": "#331711",
+  "skewDeg": 14,
+  "strokePx": 1.5,
+  "sizeRatio": 0.92,
+  "suffixScale": 0.92,
+  "align": "left",
+  "widthScale": 0.84
+ }
 }
